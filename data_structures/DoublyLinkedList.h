@@ -26,6 +26,35 @@ class DoublyLinkedList {
   public:
       DoublyLinkedList(): head(nullptr), tail(nullptr), count(0) {}
 
+      ~DoublyLinkedList(const DoublyLinkedList<T>& other) : head(nullptr), tail(nullptr), count(0) {
+        DLLNode<T>* cur = other.head;
+        while (cur != nullptr) {
+         insert_iterator(cur -> data);
+         cur = cur -> data;
+        }
+      }
+
+      DoublyLinkedList<T>& operator = (const DoublyLinkedList<T>& other) {
+        if  (this == &other).return *this;
+
+        DLLNode<T>* cur = head;
+        while (cur != nullptr) {
+          DLLNode<T>* toDelete = cur;
+          cur = cur->next;
+          delete toDelete;
+        }
+        head = tail = nullptr;
+        count = 0;
+ 
+        // sao chep sau tung node tu "other"
+        cur = other.head;
+        while (cur != nullptr) {
+          insertBack(cur->data);
+          cur = cur->next;
+        }
+        return *this;
+      }
+ 
       ~DoublyLinkedList() {
         DLLNode<T>* cur = head;
         while (cur != nullptr) {
@@ -34,7 +63,7 @@ class DoublyLinkedList {
           delete toDelete;
         }
       }
-
+      
       // thêm cuối danh sách
       void insertBack(const T& data) {
         DLLNode<T>* newNode = new DLLNode<T>(data);

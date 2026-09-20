@@ -4,6 +4,8 @@
 #include <string>
 #include <iostream>
 #include "Entity.h"
+#include "Service.h"
+#include "../data_structures/DoublyLinkedList.h"
 
 using namespace std;
 
