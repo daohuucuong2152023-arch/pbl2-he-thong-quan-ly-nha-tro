@@ -76,13 +76,16 @@ class BST {
         return node;
     }
 
-    void inorderRec(BSTNode* node, void (*visit)(const Room&)) const {
+    // Duyệt cây theo thứ tự tăng dần
+    template <class Func>
+    void inorderRec(BSTNode* node, Func visit) const {
         if (node == nullptr) return;
         inorderRec(node->left, visit);
         visit(node->data);
         inorderRec(node->right, visit);
     }
 
+    
     void destroyRec(BSTNode* node) {
         if (node == nullptr) return;
         destroyRec(node->left);
