@@ -1,5 +1,5 @@
-#ifndef TENANT_H
-#define TENANT_H
+#ifndef INVOICE_H
+#define INVOICE_H
 
 #include <string>
 #include <iostream>

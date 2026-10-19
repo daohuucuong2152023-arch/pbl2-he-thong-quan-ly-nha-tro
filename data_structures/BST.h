@@ -1,4 +1,5 @@
-// class ở trên, định nghĩa hàm ở dưới để include cho khỏe
+// class ở trên, định nghĩa hàm ở dưới để include cho 
+// thêm/cập nhập phong, tim phong theo mã, xóa phong, duyệt danh sách theo mã tăng dân
 
 #ifndef BST_H
 #define BST_H
@@ -15,7 +16,6 @@ struct BSTNode{
   BSTNode *left;
   BSTNode *right;
 
-  // Hàm khởi tạo(Constructor)
   BSTNode(const string& k, const Room& d)
         : key(k), data(d), left(nullptr), right(nullptr) {}
 };
@@ -95,7 +95,7 @@ class BST {
 
 public:
     BST() : root(nullptr) {}
-    ~BST() { destroyRec(root); } // <-- SUA: hoan thanh destructor, giai phong toan bo cay
+    ~BST() { destroyRec(root); } 
 
     // Thêm phòng mới (hoặc cập nhật nếu mã phòng đã tồn tại)
     void insert(const string& key, const Room& data) {

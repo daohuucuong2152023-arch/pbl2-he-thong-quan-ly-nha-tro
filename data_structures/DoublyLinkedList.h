@@ -4,9 +4,8 @@
 #include <iostream>
 using namespace std;
 
-// dùng cho danh sách Room
-// thêm/xóa/sửa/duyệt/ tái sử dụng
-// 
+//chứa các file dữ liệu chính của chương trình trong RAM -> cái bảng danh sách
+
 template <class T> 
 struct DLLNode {
   T data;
@@ -26,16 +25,16 @@ class DoublyLinkedList {
   public:
       DoublyLinkedList(): head(nullptr), tail(nullptr), count(0) {}
 
-      ~DoublyLinkedList(const DoublyLinkedList<T>& other) : head(nullptr), tail(nullptr), count(0) {
-        DLLNode<T>* cur = other.head;
+      DoublyLinkedList(const DoublyLinkedList<T>& other) : head(nullptr), tail(nullptr), count(0) {
+        DLLNode<T>* cur = other.head; // copy construction
         while (cur != nullptr) {
-         insert_iterator(cur -> data);
-         cur = cur -> data;
+         insertBack(cur -> data); // đọc danh sách nguồn ngoai
+         cur = cur -> next;
         }
       }
 
       DoublyLinkedList<T>& operator = (const DoublyLinkedList<T>& other) {
-        if  (this == &other).return *this;
+        if  (this == &other) return *this;
 
         DLLNode<T>* cur = head;
         while (cur != nullptr) {
@@ -91,6 +90,7 @@ class DoublyLinkedList {
         }
         count++;
       }
+      
       // xóa phần tử đầu tiên (phải thỏa mãn đk matchFn(data) == true)
       // nếu xóa đc tyhif trả vê true oke
       bool removeIf(bool (*matchFn)(const T&)) {
@@ -117,7 +117,6 @@ class DoublyLinkedList {
         }
         return false;
       }
-
 
       // tìm phần tử đầu tiên 
       bool findIf(bool (*matchFn)(const T&), T& result) const {

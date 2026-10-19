@@ -2,24 +2,7 @@
 #define QUEUE_H
 using namespace std;
 
-// Queue (FIFO) tổng quát - dùng cho hàng đợi check - in 
-// khách hàng đắng ký trước được xử lý trước or hàng đợi hóa đơn cần xử lý
-// template <class Queue
-// {
-// private:
-//   /* data */
-// public:
-//   Queue(/* args */);
-//   ~Queue();
-// };
-
-// Queue::Queue(/* args */)
-// {
-// }
-
-// Queue::~Queue()
-// {
-// }
+// chứa khách đang đợi chờ xử lí check - in
 
 template <class T>
 struct QueueNode {
@@ -69,8 +52,9 @@ class Queue {
 
     // dữ nguyên dữ liệu (dùng trong nội bộ trong destructor)
     void dequeue() {
-      if (isEmpty()) toDelete = frontPtr;
-      frontPtr = frontPtr -> next;
+      if (isEmpty()) return;
+      QueueNode<T>* toDelete = frontPtr;
+      frontPtr = frontPtr->next;
       if (frontPtr == nullptr) rearPtr = nullptr;
       delete toDelete;
       count--;

@@ -3,7 +3,8 @@
 
 using namespace std;
 
-// 
+// lưu lịch sử thao tác để hoàn tác
+
 template <class T>
 struct StackNode {
     T data;
