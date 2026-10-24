@@ -5,7 +5,7 @@
 using namespace std;
 
 // lớp cha trừu tượng 
-// mọi model nghiệp vụ(mnjnk.jbxfvcbcvx) kế thừa từ đây
+
 class Entity {
   public:
     virtual ~Entity();

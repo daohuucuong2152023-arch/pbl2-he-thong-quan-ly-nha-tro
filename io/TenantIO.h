@@ -1,79 +1,67 @@
-#ifndef TENANT_H
-#define TENANT_H
+#ifndef TENANTIO_H
+#define TENANTIO_H
 
+#include <fstream>
+#include <sstream>
+#include <iomanip>
 #include <string>
-#include <iostream>
-#include "Person.h"
+#include "../models/Tenant.h"
+#include "../data_structures/DoublyLinkedList.h"
+
 using namespace std;
 
-// Tenant "la mot" Person + them thong tin thue phong
-class Tenant : public Person {
-private:
-    string maNguoiThue;
-    string maPhong;      // khóa ngoại -> Room
-    double tienCoc;
-    string ngayCheckIn;
-    string trangThai;    // "Dang o" / "Da tra phong"
+// Dinh dang 1 dong trong tenant.txt:
+// maNguoiThue|hoTen|cccd|soDienThoai|maPhong|tienCoc|ngayCheckIn|trangThai
 
-public:
-    Tenant();
-    Tenant(string ma, string ten, string cc, string sdt,
-           string phong, double coc, string ngayVao);
+inline void luuTenantFile(const DoublyLinkedList<Tenant>& ds, const string& tenFile) {
+    ofstream fout(tenFile);
+    if (!fout.is_open()) {
+        cout << "Loi: khong mo duoc file " << tenFile << " de ghi!" << endl;
+        return;
+    }
+    fout << fixed << setprecision(2);
+    ds.traverseForward([&fout](const Tenant& t) {
+        fout << t.getMaNguoiThue() << "|"
+             << t.getHoTen() << "|"
+             << t.getCccd() << "|"
+             << t.getSoDienThoai() << "|"
+             << t.getMaPhong() << "|"
+             << t.getTienCoc() << "|"
+             << t.getNgayCheckIn() << "|"
+             << t.getTrangThai() << "\n";
+    });
+    fout.close();
+}
 
-    //
-    string getMaNguoiThue() const;
-    void setMaNguoiThue(const string& ma);
+inline DoublyLinkedList<Tenant> docTenantFile(const string& tenFile) {
+    DoublyLinkedList<Tenant> ds;
+    ifstream fin(tenFile);
+    if (!fin.is_open()) return ds;
 
-    string getMaPhong() const;
-    void setMaPhong(const string& phong);
+    string dong;
+    while (getline(fin, dong)) {
+        if (dong.empty()) continue;
+        stringstream ss(dong);
+        string ma, ten, cc, sdt, phong, cocStr, ngay, trangThai;
 
-    double getTienCoc() const;
-    void setTienCoc(double coc);
+        getline(ss, ma, '|');
+        getline(ss, ten, '|');
+        getline(ss, cc, '|');
+        getline(ss, sdt, '|');
+        getline(ss, phong, '|');
+        getline(ss, cocStr, '|');
+        getline(ss, ngay, '|');
+        getline(ss, trangThai, '|');
 
-    string getNgayCheckIn() const;
-    string getTrangThai() const;
-
-    void checkOut();
-
-    // 
-    string getId() const override; // ghi de lai: dung ma nguoi thue thay vi CC
-    void display() const override;
-};
-
-// định nghĩa ở dưới
-
-inline Tenant::Tenant() : tienCoc(0), trangThai("Dang o") {}
-
-inline Tenant::Tenant(string ma, string ten, string cc, string sdt,
-                       string phong, double coc, string ngayVao)
-    : Person(ten, cc, sdt),
-      maNguoiThue(ma), maPhong(phong), tienCoc(coc),
-      ngayCheckIn(ngayVao), trangThai("Dang o") {}
-
-inline string Tenant::getMaNguoiThue() const { return maNguoiThue; }
-inline void Tenant::setMaNguoiThue(const string& ma) { maNguoiThue = ma; }
-
-inline string Tenant::getMaPhong() const { return maPhong; }
-inline void Tenant::setMaPhong(const string& phong) { maPhong = phong; }
-
-inline double Tenant::getTienCoc() const { return tienCoc; }
-inline void Tenant::setTienCoc(double coc) { tienCoc = coc; }
-
-inline string Tenant::getNgayCheckIn() const { return ngayCheckIn; }
-inline string Tenant::getTrangThai() const { return trangThai; }
-
-inline void Tenant::checkOut() { trangThai = "Da tra phong"; }
-
-inline string Tenant::getId() const { return maNguoiThue; }
-
-inline void Tenant::display() const {
-    cout << "[Khach thue] " << maNguoiThue
-         << " | " << hoTen
-         << " | CCCD: " << cccd
-         << " | SDT: " << soDienThoai
-         << " | Phong: " << maPhong
-         << " | Coc: " << tienCoc << " VND"
-         << " | " << trangThai << endl;
+        Tenant t(ma, ten, cc, sdt, phong, stod(cocStr), ngay);
+        // Constructor luon dat "Dang o" -> khoi phuc lai trang thai da luu
+        if (trangThai == "Da tra phong") {
+            t.checkOut();
+        }
+        ds.insertBack(t);
+    }
+    fin.close();
+    return ds;
 }
 
 #endif
