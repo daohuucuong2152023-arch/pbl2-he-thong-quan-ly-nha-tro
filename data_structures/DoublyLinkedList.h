@@ -30,11 +30,14 @@ public:
 
     void insertFront(const T& data);
 
-    bool removeIf(bool (*matchFn)(const T&));
+    template <class Pred>
+    bool removeIf(Pred matchFn);
 
-    bool findIf(bool (*matchFn)(const T&), T& result) const;
+    template <class Pred>
+    bool findIf(Pred matchFn, T& result) const;
 
-    bool updateIf(bool (*matchFn)(const T&), void (*updateFn)(T&));
+    template <class Pred, class Upd>
+    bool updateIf(Pred matchFn, Upd updateFn);
 
     template <class Func>
     void traverseForward(Func visit) const;
@@ -121,7 +124,8 @@ void DoublyLinkedList<T>::insertFront(const T& data) {
 }
 
 template <class T>
-bool DoublyLinkedList<T>::removeIf(bool (*matchFn)(const T&)) {
+template <class Pred>
+bool DoublyLinkedList<T>::removeIf(Pred matchFn) {
     DLLNode<T>* cur = head;
     while (cur != nullptr) {
         if (matchFn(cur->data)) {
@@ -147,7 +151,8 @@ bool DoublyLinkedList<T>::removeIf(bool (*matchFn)(const T&)) {
 }
 
 template <class T>
-bool DoublyLinkedList<T>::findIf(bool (*matchFn)(const T&), T& result) const {
+template <class Pred>
+bool DoublyLinkedList<T>::findIf(Pred matchFn, T& result) const {
     DLLNode<T>* cur = head;
     while (cur != nullptr) {
         if (matchFn(cur -> data)) {
@@ -160,7 +165,8 @@ bool DoublyLinkedList<T>::findIf(bool (*matchFn)(const T&), T& result) const {
 }
 
 template <class T>
-bool DoublyLinkedList<T>::updateIf(bool (*matchFn)(const T&), void (*updateFn)(T&)) {
+template <class Pred, class Upd>
+bool DoublyLinkedList<T>::updateIf(Pred matchFn, Upd updateFn) {
     DLLNode<T>* cur = head;
     while (cur != nullptr) {
         if (matchFn(cur -> data)) {

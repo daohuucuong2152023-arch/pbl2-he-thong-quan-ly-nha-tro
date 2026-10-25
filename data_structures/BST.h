@@ -42,7 +42,8 @@ public:
 
     void remove(const string& key);
 
-    void inorderTraverse(void (*visit)(const Room&)) const;
+    template <class Func>
+    void inorderTraverse(Func visit) const;
 
     bool isEmpty() const;
 };
@@ -131,7 +132,8 @@ inline void BST::remove(const string& key) {
     root = removeRec(root, key);
 }
 
-inline void BST::inorderTraverse(void (*visit)(const Room&)) const {
+template <class Func>
+void BST::inorderTraverse(Func visit) const {
     inorderRec(root, visit);
 }
 
