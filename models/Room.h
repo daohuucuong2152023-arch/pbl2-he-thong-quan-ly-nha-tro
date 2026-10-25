@@ -32,12 +32,12 @@ public:
 
     bool isTrong() const;
 
-    //  Override từ Entity
+    // ---- Override từ Entity ----
     string getId() const override;
     void display() const override;
 };
 
-//  Định nghĩa 
+// ====== ĐỊNH NGHĨA Ở DƯỚI ======
 
 inline Room::Room() : dienTich(0), giaCoBan(0), trangThai("Trong") {}
 
