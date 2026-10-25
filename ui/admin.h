@@ -43,13 +43,16 @@ namespace ui {
     string readPassword(const string& prompt);
 }
 
-struct RoomAction {
+struct UndoAction {
     string loai;
-    Room truoc;
-    Room sau;
+    Room phongTruoc;
+    Room phongSau;
+    Tenant khach;
+    Contract hopDong;
+    Invoice hoaDon;
 
-    RoomAction();
-    RoomAction(const string& l, const Room& t, const Room& s);
+    UndoAction();
+    UndoAction(const string& l);
 };
 
 class AdminMenu {
@@ -60,7 +63,7 @@ private:
     DoublyLinkedList<Invoice>& invoices;
     Queue<Tenant>& checkinQueue;
     DoublyLinkedList<Service>& services;
-    Stack<RoomAction> undoStack;
+    Stack<UndoAction> undoStack;
     int tenantCounter;
 
     bool login();
@@ -328,10 +331,9 @@ inline string ui::readPassword(const string& prompt) {
     return pw;
 }
 
-inline RoomAction::RoomAction() {}
+inline UndoAction::UndoAction() {}
 
-inline RoomAction::RoomAction(const string& l, const Room& t, const Room& s)
-    : loai(l), truoc(t), sau(s) {}
+inline UndoAction::UndoAction(const string& l) : loai(l) {}
 
 inline AdminMenu::AdminMenu(BST& r,
                             DoublyLinkedList<Tenant>& t,
@@ -392,7 +394,7 @@ inline void AdminMenu::showMainMenu() const {
     cout << "3. Quan ly hop dong" << endl;
     cout << "4. Quan ly hoa don" << endl;
     cout << "5. Check-in (hang doi)" << endl;
-    cout << "6. Hoan tac thao tac phong gan nhat (" << undoStack.size() << ")" << endl;
+    cout << "6. Hoan tac thao tac gan nhat (" << undoStack.size() << ")" << endl;
     cout << "7. Quan ly dich vu" << endl;
     cout << "0. Luu va thoat" << endl;
     cout << "-------------------------------------" << endl;
@@ -433,22 +435,51 @@ inline void AdminMenu::xoaLichSuHoanTac() {
 }
 
 inline void AdminMenu::hoanTac() {
-    RoomAction a;
+    UndoAction a;
     if (!undoStack.pop(a)) {
         cout << "Khong co thao tac nao de hoan tac." << endl;
         ui::pause();
         return;
     }
 
-    if (a.loai == "THEM") {
-        rooms.remove(a.sau.getMaPhong());
-        cout << "Da hoan tac: them phong " << a.sau.getMaPhong() << " (phong da bi go bo)." << endl;
-    } else if (a.loai == "SUA") {
-        rooms.insert(a.truoc.getMaPhong(), a.truoc);
-        cout << "Da hoan tac: sua phong " << a.truoc.getMaPhong() << " (tra ve gia tri cu)." << endl;
-    } else if (a.loai == "XOA") {
-        rooms.insert(a.truoc.getMaPhong(), a.truoc);
-        cout << "Da hoan tac: xoa phong " << a.truoc.getMaPhong() << " (phong da duoc khoi phuc)." << endl;
+    if (a.loai == "THEM_PHONG") {
+        rooms.remove(a.phongSau.getMaPhong());
+        cout << "Da hoan tac: them phong " << a.phongSau.getMaPhong() << " (phong da bi go bo)." << endl;
+    } else if (a.loai == "SUA_PHONG") {
+        rooms.insert(a.phongTruoc.getMaPhong(), a.phongTruoc);
+        cout << "Da hoan tac: sua phong " << a.phongTruoc.getMaPhong() << " (tra ve gia tri cu)." << endl;
+    } else if (a.loai == "XOA_PHONG") {
+        rooms.insert(a.phongTruoc.getMaPhong(), a.phongTruoc);
+        cout << "Da hoan tac: xoa phong " << a.phongTruoc.getMaPhong() << " (phong da duoc khoi phuc)." << endl;
+    } else if (a.loai == "XOA_KHACH") {
+        tenants.insertBack(a.khach);
+        cout << "Da hoan tac: xoa khach " << a.khach.getMaNguoiThue() << " (khach da duoc khoi phuc)." << endl;
+    } else if (a.loai == "XOA_HOPDONG") {
+        contracts.insertBack(a.hopDong);
+        cout << "Da hoan tac: xoa hop dong " << a.hopDong.getMaHopDong() << " (hop dong da duoc khoi phuc)." << endl;
+    } else if (a.loai == "XOA_HOADON") {
+        invoices.insertBack(a.hoaDon);
+        cout << "Da hoan tac: xoa hoa don " << a.hoaDon.getMaHoaDon() << " (hoa don da duoc khoi phuc)." << endl;
+    } else if (a.loai == "SUA_HOADON") {
+        string maHD = a.hoaDon.getMaHoaDon();
+        double dienCu = a.hoaDon.getChiSoDienMoi();
+        double nuocCu = a.hoaDon.getChiSoNuocMoi();
+        invoices.updateIf(
+            [&maHD](const Invoice& x) { return x.getMaHoaDon() == maHD; },
+            [dienCu, nuocCu](Invoice& x) { x.capNhatChiSoMoi(dienCu, nuocCu); });
+        cout << "Da hoan tac: sua chi so hoa don " << maHD << " (tra ve chi so cu)." << endl;
+    } else if (a.loai == "SUA_COC") {
+        string maHD = a.hopDong.getMaHopDong();
+        string maKhach = a.hopDong.getMaNguoiThue();
+        double cocHopDongCu = a.hopDong.getTienCoc();
+        double cocKhachCu = a.khach.getTienCoc();
+        contracts.updateIf(
+            [&maHD](const Contract& x) { return x.getMaHopDong() == maHD; },
+            [cocHopDongCu](Contract& x) { x.setTienCoc(cocHopDongCu); });
+        tenants.updateIf(
+            [&maKhach](const Tenant& x) { return x.getMaNguoiThue() == maKhach; },
+            [cocKhachCu](Tenant& x) { x.setTienCoc(cocKhachCu); });
+        cout << "Da hoan tac: sua tien coc hop dong " << maHD << " (tra ve tien coc cu)." << endl;
     }
     ui::pause();
 }
@@ -495,7 +526,9 @@ inline void AdminMenu::themPhong() {
 
     Room moi(ma, dienTich, giaCoBan, "Trong");
     rooms.insert(ma, moi);
-    undoStack.push(RoomAction("THEM", Room(), moi));
+    UndoAction a("THEM_PHONG");
+    a.phongSau = moi;
+    undoStack.push(a);
 
     cout << "Da them phong:" << endl;
     moi.display();
@@ -528,7 +561,10 @@ inline void AdminMenu::suaPhong() {
     }
 
     rooms.insert(ma, r);
-    undoStack.push(RoomAction("SUA", truoc, r));
+    UndoAction a("SUA_PHONG");
+    a.phongTruoc = truoc;
+    a.phongSau = r;
+    undoStack.push(a);
 
     cout << "Da cap nhat phong:" << endl;
     r.display();
@@ -551,7 +587,9 @@ inline void AdminMenu::xoaPhong() {
     }
     if (ui::confirm("Ban co chac muon xoa phong " + ma + "?")) {
         rooms.remove(ma);
-        undoStack.push(RoomAction("XOA", r, Room()));
+        UndoAction a("XOA_PHONG");
+        a.phongTruoc = r;
+        undoStack.push(a);
         cout << "Da xoa phong " << ma << endl;
     } else {
         cout << "Da huy." << endl;
@@ -924,6 +962,9 @@ inline void AdminMenu::xoaKhach() {
         return;
     }
     if (ui::confirm("Ban co chac muon xoa khach " + ma + "?")) {
+        UndoAction a("XOA_KHACH");
+        a.khach = t;
+        undoStack.push(a);
         tenants.removeIf([&ma](const Tenant& x) { return x.getMaNguoiThue() == ma; });
         cout << "Da xoa khach " << ma << endl;
     } else {
@@ -1025,6 +1066,9 @@ inline void AdminMenu::xoaHopDong() {
         return;
     }
     if (ui::confirm("Ban co chac muon xoa hop dong " + ma + "?")) {
+        UndoAction a("XOA_HOPDONG");
+        a.hopDong = c;
+        undoStack.push(a);
         contracts.removeIf([&ma](const Contract& x) { return x.getMaHopDong() == ma; });
         cout << "Da xoa hop dong " << ma << endl;
     } else {
@@ -1049,6 +1093,11 @@ inline void AdminMenu::suaTienCoc() {
     c.display();
     double cocMoi = ui::readOptionalPositiveDouble("Tien coc moi (Enter de giu nguyen): ", c.getTienCoc());
     string maKhach = c.getMaNguoiThue();
+
+    UndoAction a("SUA_COC");
+    a.hopDong = c;
+    tenants.findIf([&maKhach](const Tenant& x) { return x.getMaNguoiThue() == maKhach; }, a.khach);
+    undoStack.push(a);
 
     contracts.updateIf(
         [&ma](const Contract& x) { return x.getMaHopDong() == ma; },
@@ -1146,6 +1195,7 @@ inline void AdminMenu::lapHoaDon() {
     Invoice hd(maHD, maPhong, thang, dienCu, dienMoi, nuocCu, nuocMoi,
                giaDien, giaNuoc, r.getGiaCoBan());
     invoices.insertBack(hd);
+    xoaLichSuHoanTac();
 
     cout << "Da lap hoa don:" << endl;
     hd.display();
@@ -1203,6 +1253,7 @@ inline void AdminMenu::thanhToanHoaDon() {
         invoices.updateIf(
             [&ma](const Invoice& x) { return x.getMaHoaDon() == ma; },
             [](Invoice& x) { x.danhDauDaThanhToan(); });
+        xoaLichSuHoanTac();
         cout << "Da ghi nhan thanh toan." << endl;
     } else {
         cout << "Da huy." << endl;
@@ -1225,6 +1276,9 @@ inline void AdminMenu::xoaHoaDon() {
         return;
     }
     if (ui::confirm("Ban co chac muon xoa hoa don " + ma + "?")) {
+        UndoAction a("XOA_HOADON");
+        a.hoaDon = h;
+        undoStack.push(a);
         invoices.removeIf([&ma](const Invoice& x) { return x.getMaHoaDon() == ma; });
         cout << "Da xoa hoa don " << ma << endl;
     } else {
@@ -1268,6 +1322,11 @@ inline void AdminMenu::suaChiSoHoaDon() {
                                             ", cu " + to_string((long long)h.getChiSoNuocCu()) + "): ",
                                             h.getChiSoNuocMoi(), h.getChiSoNuocCu());
 
+    if (dienMoi != h.getChiSoDienMoi() || nuocMoi != h.getChiSoNuocMoi()) {
+        UndoAction a("SUA_HOADON");
+        a.hoaDon = h;
+        undoStack.push(a);
+    }
     invoices.updateIf(
         [&ma](const Invoice& x) { return x.getMaHoaDon() == ma; },
         [dienMoi, nuocMoi](Invoice& x) { x.capNhatChiSoMoi(dienMoi, nuocMoi); });
