@@ -81,6 +81,11 @@ private:
 
     void checkinMenu();
     void inKhachCho(const Tenant& t) const;
+    template <class Func>
+    void duyetHangDoi(Func visit);
+    void capNhatBoDemKhach();
+    bool cccdDangCho(const string& cccd);
+    void xemHangDoi();
     void dangKyCheckin();
     void xuLyCheckin();
 
@@ -302,6 +307,7 @@ inline AdminMenu::AdminMenu(BST& r,
                             Queue<Tenant>& q)
     : rooms(r), tenants(t), contracts(c), invoices(i), checkinQueue(q), tenantCounter(0) {
     tenantCounter = nextNumber(tenants, "TN") - 1;
+    capNhatBoDemKhach();
 }
 
 inline bool AdminMenu::login() {
@@ -589,18 +595,65 @@ inline void AdminMenu::checkinMenu() {
         cout << "-------------------------------------" << endl;
         cout << "1. Dang ky khach vao hang doi" << endl;
         cout << "2. Xu ly khach dau hang (xep phong + tao hop dong)" << endl;
+        cout << "3. Xem danh sach khach dang cho" << endl;
         cout << "0. Quay lai" << endl;
         choice = ui::readInt("Chon: ");
 
         switch (choice) {
             case 1: dangKyCheckin(); break;
             case 2: xuLyCheckin(); break;
+            case 3: xemHangDoi(); break;
             case 0: break;
             default:
                 cout << "Lua chon khong hop le!" << endl;
                 ui::pause();
         }
     } while (choice != 0);
+}
+
+template <class Func>
+void AdminMenu::duyetHangDoi(Func visit) {
+    int n = checkinQueue.size();
+    for (int i = 0; i < n; i++) {
+        Tenant t;
+        checkinQueue.dequeue(t);
+        visit(t);
+        checkinQueue.enqueue(t);
+    }
+}
+
+inline void AdminMenu::capNhatBoDemKhach() {
+    duyetHangDoi([this](const Tenant& t) {
+        string id = t.getMaNguoiThue();
+        if (id.size() > 2 && id.compare(0, 2, "TN") == 0) {
+            string rest = id.substr(2);
+            if (ui::isAllDigits(rest) && rest.size() <= 9) {
+                int v = stoi(rest);
+                if (v > tenantCounter) tenantCounter = v;
+            }
+        }
+    });
+}
+
+inline bool AdminMenu::cccdDangCho(const string& cccd) {
+    bool co = false;
+    duyetHangDoi([&cccd, &co](const Tenant& t) {
+        if (t.getCccd() == cccd) co = true;
+    });
+    return co;
+}
+
+inline void AdminMenu::xemHangDoi() {
+    cout << "------ KHACH DANG CHO CHECK-IN ------" << endl;
+    if (checkinQueue.isEmpty()) {
+        cout << "(Khong co khach nao dang cho)" << endl;
+    }
+    int stt = 0;
+    duyetHangDoi([this, &stt](const Tenant& t) {
+        cout << ++stt << ". ";
+        inKhachCho(t);
+    });
+    ui::pause();
 }
 
 inline void AdminMenu::dangKyCheckin() {
@@ -613,6 +666,12 @@ inline void AdminMenu::dangKyCheckin() {
     }, daO);
     if (trung) {
         cout << "CCCD nay dang thue phong " << daO.getMaPhong() << " (khach " << daO.getMaNguoiThue() << ")!" << endl;
+        ui::pause();
+        return;
+    }
+
+    if (cccdDangCho(cccd)) {
+        cout << "CCCD nay da co trong hang doi!" << endl;
         ui::pause();
         return;
     }
@@ -1044,13 +1103,7 @@ inline bool AdminMenu::run() {
             case 4: invoiceMenu(); break;
             case 5: checkinMenu(); break;
             case 6: hoanTac(); break;
-            case 0:
-                if (!checkinQueue.isEmpty() &&
-                    !ui::confirm("Con " + to_string(checkinQueue.size()) +
-                                 " khach dang cho check-in se bi mat khi thoat. Van thoat?")) {
-                    choice = -1;
-                }
-                break;
+            case 0: break;
             default:
                 cout << "Lua chon khong hop le!" << endl;
                 ui::pause();
