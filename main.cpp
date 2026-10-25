@@ -11,10 +11,13 @@ using namespace std;
 #include "models/Tenant.h"
 #include "models/Contract.h"
 #include "models/Invoice.h"
+#include "models/Service.h"
 #include "io/RoomIO.h"
 #include "io/TenantIO.h"
 #include "io/ContractIO.h"
 #include "io/InvoiceIO.h"
+#include "io/QueueIO.h"
+#include "io/ServiceIO.h"
 #include "ui/admin.h"
 
 int main() {
@@ -30,9 +33,11 @@ int main() {
     DoublyLinkedList<Tenant> tenants = docTenantFile("data/tenant.txt");
     DoublyLinkedList<Contract> contracts = docContractFile("data/contract.txt");
     DoublyLinkedList<Invoice> invoices = docInvoiceFile("data/invoice.txt");
+    DoublyLinkedList<Service> services = docServiceFile("data/service.txt");
     Queue<Tenant> checkinQueue;
+    docQueueFile(checkinQueue, "data/queue.txt");
 
-    AdminMenu menu(rooms, tenants, contracts, invoices, checkinQueue);
+    AdminMenu menu(rooms, tenants, contracts, invoices, checkinQueue, services);
     bool canLuu = menu.run();
 
     if (canLuu) {
@@ -44,6 +49,8 @@ int main() {
         luuTenantFile(tenants, "data/tenant.txt");
         luuContractFile(contracts, "data/contract.txt");
         luuInvoiceFile(invoices, "data/invoice.txt");
+        luuQueueFile(checkinQueue, "data/queue.txt");
+        luuServiceFile(services, "data/service.txt");
         cout << "Da luu du lieu. Tam biet!" << endl;
     }
     return 0;
