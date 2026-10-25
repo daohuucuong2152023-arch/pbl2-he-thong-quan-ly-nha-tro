@@ -94,17 +94,20 @@ private:
     void timKhach();
     void suaKhach();
     void traPhong();
+    void xoaKhach();
 
     void contractMenu();
     void xemHopDong(bool chiConHieuLuc) const;
     void timHopDong();
     void giaHanHopDong();
+    void xoaHopDong();
 
     void invoiceMenu();
     void lapHoaDon();
     void xemHoaDon(bool chiChuaThu) const;
     void xemHoaDonTheoPhong() const;
     void thanhToanHoaDon();
+    void xoaHoaDon();
 
 public:
     AdminMenu(BST& r,
@@ -754,6 +757,7 @@ inline void AdminMenu::tenantMenu() {
         cout << "3. Tim khach theo ma" << endl;
         cout << "4. Sua thong tin khach" << endl;
         cout << "5. Tra phong (check-out)" << endl;
+        cout << "6. Xoa khach da tra phong" << endl;
         cout << "0. Quay lai" << endl;
         choice = ui::readInt("Chon: ");
 
@@ -763,6 +767,7 @@ inline void AdminMenu::tenantMenu() {
             case 3: timKhach(); break;
             case 4: suaKhach(); break;
             case 5: traPhong(); break;
+            case 6: xoaKhach(); break;
             case 0: break;
             default:
                 cout << "Lua chon khong hop le!" << endl;
@@ -866,6 +871,35 @@ inline void AdminMenu::traPhong() {
     ui::pause();
 }
 
+inline void AdminMenu::xoaKhach() {
+    string ma = ui::toUpper(ui::readText("Nhap ma khach can xoa: ", false));
+    Tenant t;
+    if (!tenants.findIf([&ma](const Tenant& x) { return x.getMaNguoiThue() == ma; }, t)) {
+        cout << "Khong tim thay khach " << ma << endl;
+        ui::pause();
+        return;
+    }
+    t.display();
+    if (t.getTrangThai() == "Dang o") {
+        cout << "Khach dang o, hay lam thu tuc tra phong truoc." << endl;
+        ui::pause();
+        return;
+    }
+    Contract hd;
+    if (contracts.findIf([&ma](const Contract& c) { return c.getMaNguoiThue() == ma; }, hd)) {
+        cout << "Khach con hop dong " << hd.getMaHopDong() << ", hay xoa hop dong truoc." << endl;
+        ui::pause();
+        return;
+    }
+    if (ui::confirm("Ban co chac muon xoa khach " + ma + "?")) {
+        tenants.removeIf([&ma](const Tenant& x) { return x.getMaNguoiThue() == ma; });
+        cout << "Da xoa khach " << ma << endl;
+    } else {
+        cout << "Da huy." << endl;
+    }
+    ui::pause();
+}
+
 inline void AdminMenu::contractMenu() {
     int choice;
     do {
@@ -875,6 +909,7 @@ inline void AdminMenu::contractMenu() {
         cout << "2. Xem hop dong con hieu luc" << endl;
         cout << "3. Tim hop dong theo ma" << endl;
         cout << "4. Gia han hop dong" << endl;
+        cout << "5. Xoa hop dong da ket thuc" << endl;
         cout << "0. Quay lai" << endl;
         choice = ui::readInt("Chon: ");
 
@@ -883,6 +918,7 @@ inline void AdminMenu::contractMenu() {
             case 2: xemHopDong(true); break;
             case 3: timHopDong(); break;
             case 4: giaHanHopDong(); break;
+            case 5: xoaHopDong(); break;
             case 0: break;
             default:
                 cout << "Lua chon khong hop le!" << endl;
@@ -940,6 +976,29 @@ inline void AdminMenu::giaHanHopDong() {
     ui::pause();
 }
 
+inline void AdminMenu::xoaHopDong() {
+    string ma = ui::toUpper(ui::readText("Nhap ma hop dong can xoa: ", false));
+    Contract c;
+    if (!contracts.findIf([&ma](const Contract& x) { return x.getMaHopDong() == ma; }, c)) {
+        cout << "Khong tim thay hop dong " << ma << endl;
+        ui::pause();
+        return;
+    }
+    c.display();
+    if (c.isConHieuLuc()) {
+        cout << "Hop dong con hieu luc, hay lam thu tuc tra phong truoc." << endl;
+        ui::pause();
+        return;
+    }
+    if (ui::confirm("Ban co chac muon xoa hop dong " + ma + "?")) {
+        contracts.removeIf([&ma](const Contract& x) { return x.getMaHopDong() == ma; });
+        cout << "Da xoa hop dong " << ma << endl;
+    } else {
+        cout << "Da huy." << endl;
+    }
+    ui::pause();
+}
+
 inline void AdminMenu::invoiceMenu() {
     int choice;
     do {
@@ -950,6 +1009,7 @@ inline void AdminMenu::invoiceMenu() {
         cout << "3. Xem hoa don chua thanh toan" << endl;
         cout << "4. Xem hoa don theo phong" << endl;
         cout << "5. Thanh toan hoa don" << endl;
+        cout << "6. Xoa hoa don chua thanh toan" << endl;
         cout << "0. Quay lai" << endl;
         choice = ui::readInt("Chon: ");
 
@@ -959,6 +1019,7 @@ inline void AdminMenu::invoiceMenu() {
             case 3: xemHoaDon(true); break;
             case 4: xemHoaDonTheoPhong(); break;
             case 5: thanhToanHoaDon(); break;
+            case 6: xoaHoaDon(); break;
             case 0: break;
             default:
                 cout << "Lua chon khong hop le!" << endl;
@@ -1079,6 +1140,29 @@ inline void AdminMenu::thanhToanHoaDon() {
             [&ma](const Invoice& x) { return x.getMaHoaDon() == ma; },
             [](Invoice& x) { x.danhDauDaThanhToan(); });
         cout << "Da ghi nhan thanh toan." << endl;
+    } else {
+        cout << "Da huy." << endl;
+    }
+    ui::pause();
+}
+
+inline void AdminMenu::xoaHoaDon() {
+    string ma = ui::toUpper(ui::readText("Nhap ma hoa don can xoa: ", false));
+    Invoice h;
+    if (!invoices.findIf([&ma](const Invoice& x) { return x.getMaHoaDon() == ma; }, h)) {
+        cout << "Khong tim thay hoa don " << ma << endl;
+        ui::pause();
+        return;
+    }
+    h.display();
+    if (h.isDaThanhToan()) {
+        cout << "Hoa don da thanh toan, khong duoc xoa." << endl;
+        ui::pause();
+        return;
+    }
+    if (ui::confirm("Ban co chac muon xoa hoa don " + ma + "?")) {
+        invoices.removeIf([&ma](const Invoice& x) { return x.getMaHoaDon() == ma; });
+        cout << "Da xoa hoa don " << ma << endl;
     } else {
         cout << "Da huy." << endl;
     }
