@@ -57,7 +57,7 @@ struct UndoAction {
 
 class AdminMenu {
 private:
-    BST& rooms;
+    BST<Room>& rooms;
     DoublyLinkedList<Tenant>& tenants;
     DoublyLinkedList<Contract>& contracts;
     DoublyLinkedList<Invoice>& invoices;
@@ -124,7 +124,7 @@ private:
     void xemDichVu() const;
 
 public:
-    AdminMenu(BST& r,
+    AdminMenu(BST<Room>& r,
               DoublyLinkedList<Tenant>& t,
               DoublyLinkedList<Contract>& c,
               DoublyLinkedList<Invoice>& i,
@@ -335,7 +335,7 @@ inline UndoAction::UndoAction() {}
 
 inline UndoAction::UndoAction(const string& l) : loai(l) {}
 
-inline AdminMenu::AdminMenu(BST& r,
+inline AdminMenu::AdminMenu(BST<Room>& r,
                             DoublyLinkedList<Tenant>& t,
                             DoublyLinkedList<Contract>& c,
                             DoublyLinkedList<Invoice>& i,

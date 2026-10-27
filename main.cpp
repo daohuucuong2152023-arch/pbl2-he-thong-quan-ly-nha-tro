@@ -23,7 +23,7 @@ using namespace std;
 int main() {
     cout << fixed << setprecision(2);
 
-    BST rooms;
+    BST<Room> rooms;
     {
         DoublyLinkedList<Room> dsPhong = docRoomFile("data/room.txt");
         dsPhong.traverseForward([&rooms](const Room& r) {

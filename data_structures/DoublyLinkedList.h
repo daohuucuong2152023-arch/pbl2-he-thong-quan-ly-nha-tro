@@ -4,204 +4,287 @@
 #include <iostream>
 using namespace std;
 
-template <class T>
-struct DLLNode {
-    T data;
-    DLLNode<T>* prev;
-    DLLNode<T>* next;
 
-    DLLNode(const T& d);
+template <typename T>
+struct Node {
+    T data;             // Dữ liệu (Room, Tenant, Invoice...)
+    Node<T>* prev;      // Con trỏ tới node trước
+    Node<T>* next;      // Con trỏ tới node sau
+
+    // Constructor của Node
+    Node(T data) {
+        this->data = data;
+        this->prev = nullptr;
+        this->next = nullptr;
+    }
 };
 
-template <class T>
+template <typename T>
 class DoublyLinkedList {
 private:
-    DLLNode<T>* head;
-    DLLNode<T>* tail;
-    int count;
+    Node<T>* head;      // Con trỏ tới node đầu tiên
+    Node<T>* tail;      // Con trỏ tới node cuối cùng
+    int size;           // Số phần tử hiện có
 
 public:
+    // === CONSTRUCTOR & DESTRUCTOR ===
     DoublyLinkedList();
-    DoublyLinkedList(const DoublyLinkedList<T>& other);
-    DoublyLinkedList<T>& operator = (const DoublyLinkedList<T>& other);
     ~DoublyLinkedList();
 
-    void insertBack(const T& data);
+    DoublyLinkedList(const DoublyLinkedList<T>& other)
+        : head(nullptr), tail(nullptr), size(0) {
+        for (Node<T>* cur = other.head; cur != nullptr; cur = cur->next) {
+            addBack(cur->data);
+        }
+    }
 
-    void insertFront(const T& data);
+    DoublyLinkedList<T>& operator=(const DoublyLinkedList<T>& other) {
+        if (this == &other) return *this;
+        DoublyLinkedList<T> copy(other);
+        Node<T>* oldHead = head;
+        Node<T>* oldTail = tail;
+        int oldSize = size;
+        head = copy.head;
+        tail = copy.tail;
+        size = copy.size;
+        copy.head = oldHead;
+        copy.tail = oldTail;
+        copy.size = oldSize;
+        return *this;
+    }
 
-    template <class Pred>
-    bool removeIf(Pred matchFn);
+    void insertFront(const T& data) { addFront(data); }
+    void insertBack(const T& data) { addBack(data); }
 
-    template <class Pred>
-    bool findIf(Pred matchFn, T& result) const;
+    template <typename Predicate>
+    bool findIf(Predicate predicate, T& result) const {
+        for (Node<T>* cur = head; cur != nullptr; cur = cur->next) {
+            if (predicate(cur->data)) {
+                result = cur->data;
+                return true;
+            }
+        }
+        return false;
+    }
 
-    template <class Pred, class Upd>
-    bool updateIf(Pred matchFn, Upd updateFn);
+    template <typename Predicate, typename Updater>
+    bool updateIf(Predicate predicate, Updater updater) {
+        for (Node<T>* cur = head; cur != nullptr; cur = cur->next) {
+            if (predicate(cur->data)) {
+                updater(cur->data);
+                return true;
+            }
+        }
+        return false;
+    }
 
-    template <class Func>
-    void traverseForward(Func visit) const;
+    template <typename Predicate>
+    bool removeIf(Predicate predicate) {
+        int index = 0;
+        for (Node<T>* cur = head; cur != nullptr; cur = cur->next, ++index) {
+            if (predicate(cur->data)) return removeAt(index);
+        }
+        return false;
+    }
 
-    template <class Func>
-    void traverseBackward(Func visit) const;
+    template <typename Visitor>
+    void traverseForward(Visitor visitor) const {
+        for (Node<T>* cur = head; cur != nullptr; cur = cur->next) {
+            visitor(static_cast<const T&>(cur->data));
+        }
+    }
 
-    int size() const;
+    template <typename Visitor>
+    void traverseBackward(Visitor visitor) const {
+        for (Node<T>* cur = tail; cur != nullptr; cur = cur->prev) {
+            visitor(static_cast<const T&>(cur->data));
+        }
+    }
+
+    // === THÊM PHẦN TỬ ===
+    void addFront(T data);      // Thêm vào đầu
+    void addBack(T data);       // Thêm vào cuối
+
+    // === XÓA PHẦN TỬ ===
+    bool removeAt(int index);   // Xóa phần tử tại vị trí index
+
+    // === TRUY CẬP ===
+    Node<T>* getHead() const;
+    Node<T>* getTail() const;
+    Node<T>* getNodeAt(int index) const;    // Lấy node tại vị trí index
+    int getSize() const;
     bool isEmpty() const;
+
+    // === HIỂN THỊ ===
+    void displayAll() const;    // Hiển thị tất cả phần tử
 };
 
-template <class T>
-DLLNode<T>::DLLNode(const T& d) : data(d), prev(nullptr), next(nullptr) {}
+// ====================================================================
+// ĐỊNH NGHĨA CÁC HÀM (phải nằm trong .h vì là template)
+// ====================================================================
 
-template <class T>
-DoublyLinkedList<T>::DoublyLinkedList() : head(nullptr), tail(nullptr), count(0) {}
-
-template <class T>
-DoublyLinkedList<T>::DoublyLinkedList(const DoublyLinkedList<T>& other) : head(nullptr), tail(nullptr), count(0) {
-    DLLNode<T>* cur = other.head;
-    while (cur != nullptr) {
-        insertBack(cur -> data);
-        cur = cur -> next;
-    }
+// --- Constructor ---
+template <typename T>
+DoublyLinkedList<T>::DoublyLinkedList() {
+    head = nullptr;
+    tail = nullptr;
+    size = 0;
 }
 
-template <class T>
-DoublyLinkedList<T>& DoublyLinkedList<T>::operator = (const DoublyLinkedList<T>& other) {
-    if (this == &other) return *this;
-
-    DLLNode<T>* cur = head;
-    while (cur != nullptr) {
-        DLLNode<T>* toDelete = cur;
-        cur = cur->next;
-        delete toDelete;
-    }
-    head = tail = nullptr;
-    count = 0;
-
-    cur = other.head;
-    while (cur != nullptr) {
-        insertBack(cur->data);
-        cur = cur->next;
-    }
-    return *this;
-}
-
-template <class T>
+// --- Destructor: giải phóng bộ nhớ tất cả node ---
+template <typename T>
 DoublyLinkedList<T>::~DoublyLinkedList() {
-    DLLNode<T>* cur = head;
-    while (cur != nullptr) {
-        DLLNode<T>* toDelete = cur;
-        cur = cur -> next;
-        delete toDelete;
+    Node<T>* current = head;
+    while (current != nullptr) {
+        Node<T>* nextNode = current->next;  // Lưu lại node tiếp theo
+        delete current;                      // Xóa node hiện tại
+        current = nextNode;                  // Chuyển sang node tiếp
     }
+    head = nullptr;
+    tail = nullptr;
+    size = 0;
 }
 
-template <class T>
-void DoublyLinkedList<T>::insertBack(const T& data) {
-    DLLNode<T>* newNode = new DLLNode<T>(data);
-    if (tail == nullptr) {
-        head = tail = newNode;
-    }
-    else {
-        tail -> next = newNode;
-        newNode -> prev = tail;
-        tail = newNode;
-    }
-    count++;
-}
+// --- Thêm vào đầu danh sách ---
+template <typename T>
+void DoublyLinkedList<T>::addFront(T data) {
+    Node<T>* newNode = new Node<T>(data);
 
-template <class T>
-void DoublyLinkedList<T>::insertFront(const T& data) {
-    DLLNode<T>* newNode = new DLLNode<T>(data);
-    if (head == nullptr) {
-        head = tail = newNode;
-    }
-    else {
-        newNode -> next = head;
-        head -> prev = newNode;
+    if (isEmpty()) {
+        // Danh sách rỗng: node mới vừa là head vừa là tail
         head = newNode;
+        tail = newNode;
+    } else {
+        // Nối node mới vào trước head cũ
+        newNode->next = head;   // Node mới trỏ tới head cũ
+        head->prev = newNode;   // Head cũ trỏ ngược lại node mới
+        head = newNode;         // Cập nhật head = node mới
     }
-    count++;
+    size++;
 }
 
-template <class T>
-template <class Pred>
-bool DoublyLinkedList<T>::removeIf(Pred matchFn) {
-    DLLNode<T>* cur = head;
-    while (cur != nullptr) {
-        if (matchFn(cur->data)) {
-            if (cur->prev) {
-                cur->prev->next = cur -> next;
-            }
-            else {
-                head = cur -> next;
-            }
-            if (cur -> next) {
-                cur -> next -> prev = cur -> prev;
-            }
-            else {
-                tail = cur -> prev;
-            }
-            delete cur;
-            count--;
-            return true;
+// --- Thêm vào cuối danh sách ---
+template <typename T>
+void DoublyLinkedList<T>::addBack(T data) {
+    Node<T>* newNode = new Node<T>(data);
+
+    if (isEmpty()) {
+        head = newNode;
+        tail = newNode;
+    } else {
+        // Nối node mới vào sau tail cũ
+        newNode->prev = tail;   // Node mới trỏ ngược lại tail cũ
+        tail->next = newNode;   // Tail cũ trỏ tới node mới
+        tail = newNode;         // Cập nhật tail = node mới
+    }
+    size++;
+}
+
+// --- Xóa phần tử tại vị trí index (0-based) ---
+template <typename T>
+bool DoublyLinkedList<T>::removeAt(int index) {
+    // Kiểm tra index hợp lệ
+    if (index < 0 || index >= size) {
+        return false;
+    }
+
+    Node<T>* toDelete = getNodeAt(index);
+    if (toDelete == nullptr) return false;
+
+    // Trường hợp 1: Xóa node duy nhất trong danh sách
+    if (size == 1) {
+        head = nullptr;
+        tail = nullptr;
+    }
+    // Trường hợp 2: Xóa node đầu (head)
+    else if (toDelete == head) {
+        head = head->next;      // Head mới = node thứ 2
+        head->prev = nullptr;   // Head mới không có node trước
+    }
+    // Trường hợp 3: Xóa node cuối (tail)
+    else if (toDelete == tail) {
+        tail = tail->prev;      // Tail mới = node áp cuối
+        tail->next = nullptr;   // Tail mới không có node sau
+    }
+    // Trường hợp 4: Xóa node ở giữa
+    else {
+        toDelete->prev->next = toDelete->next;  // Node trước trỏ qua node sau
+        toDelete->next->prev = toDelete->prev;  // Node sau trỏ ngược lại node trước
+    }
+
+    delete toDelete;    // Giải phóng bộ nhớ
+    size--;
+    return true;
+}
+
+// --- Lấy node đầu ---
+template <typename T>
+Node<T>* DoublyLinkedList<T>::getHead() const {
+    return head;
+}
+
+// --- Lấy node cuối ---
+template <typename T>
+Node<T>* DoublyLinkedList<T>::getTail() const {
+    return tail;
+}
+
+// --- Lấy node tại vị trí index (0-based) ---
+template <typename T>
+Node<T>* DoublyLinkedList<T>::getNodeAt(int index) const {
+    if (index < 0 || index >= size) {
+        return nullptr;
+    }
+
+    Node<T>* current;
+
+    // Tối ưu: nếu index gần đầu thì duyệt từ head, gần cuối thì duyệt từ tail
+    if (index <= size / 2) {
+        // Duyệt từ đầu
+        current = head;
+        for (int i = 0; i < index; i++) {
+            current = current->next;
         }
-        cur = cur -> next;
-    }
-    return false;
-}
-
-template <class T>
-template <class Pred>
-bool DoublyLinkedList<T>::findIf(Pred matchFn, T& result) const {
-    DLLNode<T>* cur = head;
-    while (cur != nullptr) {
-        if (matchFn(cur -> data)) {
-            result = cur -> data;
-            return true;
+    } else {
+        // Duyệt từ cuối (ưu điểm của Doubly so với Singly!)
+        current = tail;
+        for (int i = size - 1; i > index; i--) {
+            current = current->prev;
         }
-        cur = cur -> next;
     }
-    return false;
+
+    return current;
 }
 
-template <class T>
-template <class Pred, class Upd>
-bool DoublyLinkedList<T>::updateIf(Pred matchFn, Upd updateFn) {
-    DLLNode<T>* cur = head;
-    while (cur != nullptr) {
-        if (matchFn(cur -> data)) {
-            updateFn(cur -> data);
-            return true;
-        }
-        cur = cur -> next;
-    }
-    return false;
+// --- Số phần tử ---
+template <typename T>
+int DoublyLinkedList<T>::getSize() const {
+    return size;
 }
 
-template <class T>
-template <class Func>
-void DoublyLinkedList<T>::traverseForward(Func visit) const {
-    DLLNode<T>* cur = head;
-    while (cur != nullptr) {
-        visit(cur->data);
-        cur = cur -> next;
-    }
+// --- Kiểm tra rỗng ---
+template <typename T>
+bool DoublyLinkedList<T>::isEmpty() const {
+    return size == 0;
 }
 
-template <class T>
-template <class Func>
-void DoublyLinkedList<T>::traverseBackward(Func visit) const {
-    DLLNode<T>* cur = tail;
-    while (cur != nullptr) {
-        visit(cur->data);
-        cur = cur -> prev;
+// --- Hiển thị tất cả phần tử ---
+template <typename T>
+void DoublyLinkedList<T>::displayAll() const {
+    if (isEmpty()) {
+        cout << "(Danh sach rong)" << endl;
+        return;
+    }
+
+    Node<T>* current = head;
+    int index = 0;
+    while (current != nullptr) {
+        cout << "[" << index << "] ";
+        current->data.display();    // Gọi hàm display() của T (Room, Tenant...)
+        cout << endl;
+        current = current->next;
+        index++;
     }
 }
 
-template <class T>
-int DoublyLinkedList<T>::size() const { return count; }
-
-template <class T>
-bool DoublyLinkedList<T>::isEmpty() const { return count == 0; }
-
-#endif
+#endif // DOUBLYLINKEDLIST_H

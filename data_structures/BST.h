@@ -3,42 +3,43 @@
 
 #include <iostream>
 #include <string>
-#include "../models/Room.h"
 
 using namespace std;
 
+template <class T>
 struct BSTNode {
     string key;
-    Room data;
-    BSTNode *left;
-    BSTNode *right;
+    T data;
+    BSTNode<T> *left;
+    BSTNode<T> *right;
 
-    BSTNode(const string& k, const Room& d);
+    BSTNode(const string& k, const T& d);
 };
 
+template <class T>
 class BST {
 private:
-    BSTNode* root;
+    BSTNode<T>* root;
 
-    BSTNode* insertRec(BSTNode* node, const string& key, const Room& data);
+    BSTNode<T>* insertRec(BSTNode<T>* node, const string& key, const T& data);
 
-    BSTNode* searchRec(BSTNode* node, const string& key) const;
-    BSTNode* findMin(BSTNode* node) const;
+    BSTNode<T>* searchRec(BSTNode<T>* node, const string& key) const;
+    BSTNode<T>* findMin(BSTNode<T>* node) const;
 
-    BSTNode* removeRec(BSTNode* node, const string& key);
+    BSTNode<T>* removeRec(BSTNode<T>* node, const string& key);
 
     template <class Func>
-    void inorderRec(BSTNode* node, Func visit) const;
+    void inorderRec(BSTNode<T>* node, Func visit) const;
 
-    void destroyRec(BSTNode* node);
+    void destroyRec(BSTNode<T>* node);
 
 public:
     BST();
     ~BST();
 
-    void insert(const string& key, const Room& data);
+    void insert(const string& key, const T& data);
 
-    bool search(const string& key, Room& result) const;
+    bool search(const string& key, T& result) const;
 
     void remove(const string& key);
 
@@ -48,11 +49,15 @@ public:
     bool isEmpty() const;
 };
 
-inline BSTNode::BSTNode(const string& k, const Room& d)
+// ====== ĐỊNH NGHĨA Ở DƯỚI ======
+
+template <class T>
+BSTNode<T>::BSTNode(const string& k, const T& d)
     : key(k), data(d), left(nullptr), right(nullptr) {}
 
-inline BSTNode* BST::insertRec(BSTNode* node, const string& key, const Room& data) {
-    if (node == nullptr) return new BSTNode(key, data);
+template <class T>
+BSTNode<T>* BST<T>::insertRec(BSTNode<T>* node, const string& key, const T& data) {
+    if (node == nullptr) return new BSTNode<T>(key, data);
     if (key < node->key)
         node->left = insertRec(node->left, key, data);
     else if (key > node->key)
@@ -62,18 +67,21 @@ inline BSTNode* BST::insertRec(BSTNode* node, const string& key, const Room& dat
     return node;
 }
 
-inline BSTNode* BST::searchRec(BSTNode* node, const string& key) const {
+template <class T>
+BSTNode<T>* BST<T>::searchRec(BSTNode<T>* node, const string& key) const {
     if (node == nullptr || node->key == key) return node;
     if (key < node->key) return searchRec(node->left, key);
     return searchRec(node->right, key);
 }
 
-inline BSTNode* BST::findMin(BSTNode* node) const {
+template <class T>
+BSTNode<T>* BST<T>::findMin(BSTNode<T>* node) const {
     while (node && node->left != nullptr) node = node->left;
     return node;
 }
 
-inline BSTNode* BST::removeRec(BSTNode* node, const string& key) {
+template <class T>
+BSTNode<T>* BST<T>::removeRec(BSTNode<T>* node, const string& key) {
     if (node == nullptr) return nullptr;
 
     if (key < node->key) {
@@ -82,15 +90,15 @@ inline BSTNode* BST::removeRec(BSTNode* node, const string& key) {
         node->right = removeRec(node->right, key);
     } else {
         if (node->left == nullptr) {
-            BSTNode* temp = node->right;
+            BSTNode<T>* temp = node->right;
             delete node;
             return temp;
         } else if (node->right == nullptr) {
-            BSTNode* temp = node->left;
+            BSTNode<T>* temp = node->left;
             delete node;
             return temp;
         }
-        BSTNode* successor = findMin(node->right);
+        BSTNode<T>* successor = findMin(node->right);
         node->key = successor->key;
         node->data = successor->data;
         node->right = removeRec(node->right, successor->key);
@@ -98,45 +106,54 @@ inline BSTNode* BST::removeRec(BSTNode* node, const string& key) {
     return node;
 }
 
+template <class T>
 template <class Func>
-void BST::inorderRec(BSTNode* node, Func visit) const {
+void BST<T>::inorderRec(BSTNode<T>* node, Func visit) const {
     if (node == nullptr) return;
     inorderRec(node->left, visit);
     visit(node->data);
     inorderRec(node->right, visit);
 }
 
-inline void BST::destroyRec(BSTNode* node) {
+template <class T>
+void BST<T>::destroyRec(BSTNode<T>* node) {
     if (node == nullptr) return;
     destroyRec(node->left);
     destroyRec(node->right);
     delete node;
 }
 
-inline BST::BST() : root(nullptr) {}
+template <class T>
+BST<T>::BST() : root(nullptr) {}
 
-inline BST::~BST() { destroyRec(root); }
+template <class T>
+BST<T>::~BST() { destroyRec(root); }
 
-inline void BST::insert(const string& key, const Room& data) {
+template <class T>
+void BST<T>::insert(const string& key, const T& data) {
     root = insertRec(root, key, data);
 }
 
-inline bool BST::search(const string& key, Room& result) const {
-    BSTNode* node = searchRec(root, key);
+template <class T>
+bool BST<T>::search(const string& key, T& result) const {
+    BSTNode<T>* node = searchRec(root, key);
     if (node == nullptr) return false;
     result = node->data;
     return true;
 }
 
-inline void BST::remove(const string& key) {
+template <class T>
+void BST<T>::remove(const string& key) {
     root = removeRec(root, key);
 }
 
+template <class T>
 template <class Func>
-void BST::inorderTraverse(Func visit) const {
+void BST<T>::inorderTraverse(Func visit) const {
     inorderRec(root, visit);
 }
 
-inline bool BST::isEmpty() const { return root == nullptr; }
+template <class T>
+bool BST<T>::isEmpty() const { return root == nullptr; }
 
 #endif
