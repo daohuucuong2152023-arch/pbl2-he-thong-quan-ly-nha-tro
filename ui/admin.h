@@ -3,8 +3,6 @@
 
 #include <iostream>
 #include <string>
-#include <cstdlib>
-#include <conio.h>
 
 #include "../data_structures/BST.h"
 #include "../data_structures/DoublyLinkedList.h"
@@ -15,45 +13,10 @@
 #include "../models/Contract.h"
 #include "../models/Invoice.h"
 #include "../models/Service.h"
+#include "InputHelper.h"
+#include "UndoAction.h"
 
 using namespace std;
-
-namespace ui {
-    void clearScreen();
-    void pause();
-    string trim(const string& s);
-    string toUpper(string s);
-    bool isAllDigits(const string& s);
-    bool isValidMonth(const string& s);
-    bool isValidDate(const string& s);
-
-    string readLine(const string& prompt);
-    string readText(const string& prompt, bool allowEmpty);
-    int readInt(const string& prompt);
-    int readPositiveInt(const string& prompt);
-    double readDouble(const string& prompt, double minValue, bool strictlyGreater);
-    double readPositiveDouble(const string& prompt);
-    double readNonNegativeDouble(const string& prompt);
-    double readOptionalPositiveDouble(const string& prompt, double current);
-    double readOptionalDouble(const string& prompt, double current, double minValue);
-    string readDigits(const string& prompt, size_t length, bool allowEmpty);
-    string readDate(const string& prompt);
-    string readMonth(const string& prompt);
-    bool confirm(const string& prompt);
-    string readPassword(const string& prompt);
-}
-
-struct UndoAction {
-    string loai;
-    Room phongTruoc;
-    Room phongSau;
-    Tenant khach;
-    Contract hopDong;
-    Invoice hoaDon;
-
-    UndoAction();
-    UndoAction(const string& l);
-};
 
 class AdminMenu {
 private:
@@ -63,20 +26,20 @@ private:
     DoublyLinkedList<Invoice>& invoices;
     Queue<Tenant>& checkinQueue;
     DoublyLinkedList<Service>& services;
-    Stack<UndoAction> undoStack;
+    Stack<ThaoTacHoanTac> nganXepHoanTac;
     int tenantCounter;
 
-    bool login();
-    void showMainMenu() const;
+    bool dangNhap();
+    void hienThiMenuChinh() const;
 
     template <class T>
-    int nextNumber(const DoublyLinkedList<T>& ds, const string& prefix) const;
+    int soTiepTheo(const DoublyLinkedList<T>& ds, const string& prefix) const;
     string taoMa(const string& prefix, int number) const;
     bool capNhatTrangThaiPhong(const string& maPhong, const string& trangThai);
     void xoaLichSuHoanTac();
     void hoanTac();
 
-    void roomMenu();
+    void menuPhong();
     void themPhong();
     void suaPhong();
     void xoaPhong();
@@ -85,7 +48,7 @@ private:
     int inPhongTrong() const;
     void xemPhongTrong() const;
 
-    void checkinMenu();
+    void menuCheckin();
     void inKhachCho(const Tenant& t) const;
     template <class Func>
     void duyetHangDoi(Func visit);
@@ -95,21 +58,21 @@ private:
     void dangKyCheckin();
     void xuLyCheckin();
 
-    void tenantMenu();
+    void menuKhach();
     void xemKhach(bool chiDangO) const;
     void timKhach();
     void suaKhach();
     void traPhong();
     void xoaKhach();
 
-    void contractMenu();
+    void menuHopDong();
     void xemHopDong(bool chiConHieuLuc) const;
     void timHopDong();
     void giaHanHopDong();
     void xoaHopDong();
     void suaTienCoc();
 
-    void invoiceMenu();
+    void menuHoaDon();
     void lapHoaDon();
     void xemHoaDon(bool chiChuaThu) const;
     void xemHoaDonTheoPhong() const;
@@ -117,7 +80,7 @@ private:
     void xoaHoaDon();
     void suaChiSoHoaDon();
 
-    void serviceMenu();
+    void menuDichVu();
     void themDichVu();
     void suaDichVu();
     void xoaDichVu();
@@ -131,209 +94,8 @@ public:
               Queue<Tenant>& q,
               DoublyLinkedList<Service>& s);
 
-    bool run();
+    bool chay();
 };
-
-inline void ui::clearScreen() {
-    system("cls");
-}
-
-inline void ui::pause() {
-    cout << "\nNhan Enter de tiep tuc...";
-    string s;
-    getline(cin, s);
-}
-
-inline string ui::trim(const string& s) {
-    size_t a = s.find_first_not_of(" \t\r\n");
-    if (a == string::npos) return "";
-    size_t b = s.find_last_not_of(" \t\r\n");
-    return s.substr(a, b - a + 1);
-}
-
-inline string ui::toUpper(string s) {
-    for (size_t i = 0; i < s.size(); i++) {
-        s[i] = (char)toupper((unsigned char)s[i]);
-    }
-    return s;
-}
-
-inline bool ui::isAllDigits(const string& s) {
-    if (s.empty()) return false;
-    for (size_t i = 0; i < s.size(); i++) {
-        if (!isdigit((unsigned char)s[i])) return false;
-    }
-    return true;
-}
-
-inline bool ui::isValidMonth(const string& s) {
-    if (s.size() != 7 || s[4] != '-') return false;
-    if (!isAllDigits(s.substr(0, 4)) || !isAllDigits(s.substr(5, 2))) return false;
-    int m = stoi(s.substr(5, 2));
-    return m >= 1 && m <= 12;
-}
-
-inline bool ui::isValidDate(const string& s) {
-    if (s.size() != 10 || s[7] != '-') return false;
-    if (!isValidMonth(s.substr(0, 7))) return false;
-    if (!isAllDigits(s.substr(8, 2))) return false;
-    int d = stoi(s.substr(8, 2));
-    return d >= 1 && d <= 31;
-}
-
-inline string ui::readLine(const string& prompt) {
-    cout << prompt;
-    string s;
-    if (!getline(cin, s)) {
-        cout << "\nKhong doc duoc du lieu nhap. Thoat chuong trinh." << endl;
-        exit(0);
-    }
-    return s;
-}
-
-inline string ui::readText(const string& prompt, bool allowEmpty) {
-    while (true) {
-        string s = trim(readLine(prompt));
-        if (s.find('|') != string::npos) {
-            cout << "Khong duoc nhap ky tu '|'!" << endl;
-        } else if (s.empty() && !allowEmpty) {
-            cout << "Khong duoc de trong!" << endl;
-        } else {
-            return s;
-        }
-    }
-}
-
-inline int ui::readInt(const string& prompt) {
-    while (true) {
-        string s = trim(readLine(prompt));
-        try {
-            size_t pos = 0;
-            int v = stoi(s, &pos);
-            if (pos == s.size()) return v;
-        } catch (...) {
-        }
-        cout << "Vui long nhap so nguyen!" << endl;
-    }
-}
-
-inline int ui::readPositiveInt(const string& prompt) {
-    while (true) {
-        int v = readInt(prompt);
-        if (v > 0) return v;
-        cout << "Gia tri phai lon hon 0!" << endl;
-    }
-}
-
-inline double ui::readDouble(const string& prompt, double minValue, bool strictlyGreater) {
-    while (true) {
-        string s = trim(readLine(prompt));
-        try {
-            size_t pos = 0;
-            double v = stod(s, &pos);
-            if (pos == s.size()) {
-                if (strictlyGreater ? (v > minValue) : (v >= minValue)) return v;
-                cout << "Gia tri phai " << (strictlyGreater ? "lon hon " : "tu ") << minValue << " tro len!" << endl;
-                continue;
-            }
-        } catch (...) {
-        }
-        cout << "Vui long nhap mot so!" << endl;
-    }
-}
-
-inline double ui::readPositiveDouble(const string& prompt) {
-    return readDouble(prompt, 0, true);
-}
-
-inline double ui::readNonNegativeDouble(const string& prompt) {
-    return readDouble(prompt, 0, false);
-}
-
-inline double ui::readOptionalPositiveDouble(const string& prompt, double current) {
-    while (true) {
-        string s = trim(readLine(prompt));
-        if (s.empty()) return current;
-        try {
-            size_t pos = 0;
-            double v = stod(s, &pos);
-            if (pos == s.size() && v > 0) return v;
-        } catch (...) {
-        }
-        cout << "Vui long nhap so lon hon 0 (hoac Enter de giu nguyen)!" << endl;
-    }
-}
-
-inline double ui::readOptionalDouble(const string& prompt, double current, double minValue) {
-    while (true) {
-        string s = trim(readLine(prompt));
-        if (s.empty()) return current;
-        try {
-            size_t pos = 0;
-            double v = stod(s, &pos);
-            if (pos == s.size()) {
-                if (v >= minValue) return v;
-                cout << "Gia tri phai tu " << minValue << " tro len!" << endl;
-                continue;
-            }
-        } catch (...) {
-        }
-        cout << "Vui long nhap mot so (hoac Enter de giu nguyen)!" << endl;
-    }
-}
-
-inline string ui::readDigits(const string& prompt, size_t length, bool allowEmpty) {
-    while (true) {
-        string s = trim(readLine(prompt));
-        if (s.empty() && allowEmpty) return s;
-        if (isAllDigits(s) && s.size() == length) return s;
-        cout << "Phai gom dung " << length << " chu so!" << endl;
-    }
-}
-
-inline string ui::readDate(const string& prompt) {
-    while (true) {
-        string s = trim(readLine(prompt));
-        if (isValidDate(s)) return s;
-        cout << "Ngay khong hop le (dinh dang YYYY-MM-DD, VD: 2026-10-24)!" << endl;
-    }
-}
-
-inline string ui::readMonth(const string& prompt) {
-    while (true) {
-        string s = trim(readLine(prompt));
-        if (isValidMonth(s)) return s;
-        cout << "Thang khong hop le (dinh dang YYYY-MM, VD: 2026-10)!" << endl;
-    }
-}
-
-inline bool ui::confirm(const string& prompt) {
-    string s = trim(readLine(prompt + " (y/n): "));
-    return s == "y" || s == "Y";
-}
-
-inline string ui::readPassword(const string& prompt) {
-    cout << prompt;
-    string pw;
-    char c;
-    while ((c = _getch()) != '\r') {
-        if (c == '\b') {
-            if (!pw.empty()) {
-                pw.pop_back();
-                cout << "\b \b";
-            }
-        } else {
-            pw += c;
-            cout << '*';
-        }
-    }
-    cout << endl;
-    return pw;
-}
-
-inline UndoAction::UndoAction() {}
-
-inline UndoAction::UndoAction(const string& l) : loai(l) {}
 
 inline AdminMenu::AdminMenu(BST<Room>& r,
                             DoublyLinkedList<Tenant>& t,
@@ -342,30 +104,30 @@ inline AdminMenu::AdminMenu(BST<Room>& r,
                             Queue<Tenant>& q,
                             DoublyLinkedList<Service>& s)
     : rooms(r), tenants(t), contracts(c), invoices(i), checkinQueue(q), services(s), tenantCounter(0) {
-    tenantCounter = nextNumber(tenants, "TN") - 1;
+    tenantCounter = soTiepTheo(tenants, "TN") - 1;
     capNhatBoDemKhach();
 }
 
-inline bool AdminMenu::login() {
+inline bool AdminMenu::dangNhap() {
     const string ADMIN_USER = "admin";
     const string ADMIN_PASS = "123456";
     const int MAX_ATTEMPTS = 3;
 
     for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-        ui::clearScreen();
+        ui::xoaManHinh();
         cout << "==============================" << endl;
         cout << "   QUAN LY NHA TRO - ADMIN" << endl;
         cout << "==============================" << endl;
-        string user = ui::trim(ui::readLine("Tai khoan: "));
-        string pass = ui::readPassword("Mat khau : ");
+        string user = ui::catKhoangTrang(ui::docDong("Tai khoan: "));
+        string pass = ui::nhapMatKhau("Mat khau : ");
         if (user == ADMIN_USER && pass == ADMIN_PASS) return true;
         cout << "Sai tai khoan hoac mat khau (" << attempt << "/" << MAX_ATTEMPTS << ")" << endl;
-        ui::pause();
+        ui::tamDung();
     }
     return false;
 }
 
-inline void AdminMenu::showMainMenu() const {
+inline void AdminMenu::hienThiMenuChinh() const {
     int tongPhong = 0, phongTrong = 0;
     rooms.inorderTraverse([&tongPhong, &phongTrong](const Room& r) {
         tongPhong++;
@@ -382,7 +144,7 @@ inline void AdminMenu::showMainMenu() const {
         if (!h.isDaThanhToan()) hoaDonChuaThu++;
     });
 
-    ui::clearScreen();
+    ui::xoaManHinh();
     cout << "========== QUAN LY NHA TRO ==========" << endl;
     cout << "Phong: " << tongPhong << " (trong: " << phongTrong << ")"
          << " | Khach dang o: " << khachDangO << endl;
@@ -394,20 +156,20 @@ inline void AdminMenu::showMainMenu() const {
     cout << "3. Quan ly hop dong" << endl;
     cout << "4. Quan ly hoa don" << endl;
     cout << "5. Check-in (hang doi)" << endl;
-    cout << "6. Hoan tac thao tac gan nhat (" << undoStack.size() << ")" << endl;
+    cout << "6. Hoan tac thao tac gan nhat (" << nganXepHoanTac.size() << ")" << endl;
     cout << "7. Quan ly dich vu" << endl;
     cout << "0. Luu va thoat" << endl;
     cout << "-------------------------------------" << endl;
 }
 
 template <class T>
-int AdminMenu::nextNumber(const DoublyLinkedList<T>& ds, const string& prefix) const {
+int AdminMenu::soTiepTheo(const DoublyLinkedList<T>& ds, const string& prefix) const {
     int maxNo = 0;
     ds.traverseForward([&maxNo, &prefix](const T& x) {
         string id = x.getId();
         if (id.size() > prefix.size() && id.compare(0, prefix.size(), prefix) == 0) {
             string rest = id.substr(prefix.size());
-            if (ui::isAllDigits(rest) && rest.size() <= 9) {
+            if (ui::laChuSo(rest) && rest.size() <= 9) {
                 int n = stoi(rest);
                 if (n > maxNo) maxNo = n;
             }
@@ -431,14 +193,14 @@ inline bool AdminMenu::capNhatTrangThaiPhong(const string& maPhong, const string
 }
 
 inline void AdminMenu::xoaLichSuHoanTac() {
-    while (!undoStack.isEmpty()) undoStack.pop();
+    while (!nganXepHoanTac.isEmpty()) nganXepHoanTac.pop();
 }
 
 inline void AdminMenu::hoanTac() {
-    UndoAction a;
-    if (!undoStack.pop(a)) {
+    ThaoTacHoanTac a;
+    if (!nganXepHoanTac.pop(a)) {
         cout << "Khong co thao tac nao de hoan tac." << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
 
@@ -481,13 +243,13 @@ inline void AdminMenu::hoanTac() {
             [cocKhachCu](Tenant& x) { x.setTienCoc(cocKhachCu); });
         cout << "Da hoan tac: sua tien coc hop dong " << maHD << " (tra ve tien coc cu)." << endl;
     }
-    ui::pause();
+    ui::tamDung();
 }
 
-inline void AdminMenu::roomMenu() {
+inline void AdminMenu::menuPhong() {
     int choice;
     do {
-        ui::clearScreen();
+        ui::xoaManHinh();
         cout << "======== QUAN LY PHONG ========" << endl;
         cout << "1. Them phong" << endl;
         cout << "2. Sua phong" << endl;
@@ -496,7 +258,7 @@ inline void AdminMenu::roomMenu() {
         cout << "5. Xem danh sach (theo ma tang dan)" << endl;
         cout << "6. Xem phong trong" << endl;
         cout << "0. Quay lai" << endl;
-        choice = ui::readInt("Chon: ");
+        choice = ui::nhapSoNguyen("Chon: ");
 
         switch (choice) {
             case 1: themPhong(); break;
@@ -508,101 +270,101 @@ inline void AdminMenu::roomMenu() {
             case 0: break;
             default:
                 cout << "Lua chon khong hop le!" << endl;
-                ui::pause();
+                ui::tamDung();
         }
     } while (choice != 0);
 }
 
 inline void AdminMenu::themPhong() {
-    string ma = ui::toUpper(ui::readText("Ma phong (VD: P301): ", false));
+    string ma = ui::vietHoa(ui::nhapChuoi("Ma phong (VD: P301): ", false));
     Room tonTai;
     if (rooms.search(ma, tonTai)) {
         cout << "Ma phong " << ma << " da ton tai!" << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
-    double dienTich = ui::readPositiveDouble("Dien tich (m2): ");
-    double giaCoBan = ui::readPositiveDouble("Gia co ban (VND/thang): ");
+    double dienTich = ui::nhapSoThucDuong("Dien tich (m2): ");
+    double giaCoBan = ui::nhapSoThucDuong("Gia co ban (VND/thang): ");
 
     Room moi(ma, dienTich, giaCoBan, "Trong");
     rooms.insert(ma, moi);
-    UndoAction a("THEM_PHONG");
+    ThaoTacHoanTac a("THEM_PHONG");
     a.phongSau = moi;
-    undoStack.push(a);
+    nganXepHoanTac.push(a);
 
     cout << "Da them phong:" << endl;
     moi.display();
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::suaPhong() {
-    string ma = ui::toUpper(ui::readText("Nhap ma phong can sua: ", false));
+    string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma phong can sua: ", false));
     Room r;
     if (!rooms.search(ma, r)) {
         cout << "Khong tim thay phong " << ma << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     r.display();
     cout << "(Nhan Enter de giu nguyen gia tri cu)" << endl;
 
     Room truoc = r;
-    r.setDienTich(ui::readOptionalPositiveDouble("Dien tich moi: ", r.getDienTich()));
-    r.setGiaCoBan(ui::readOptionalPositiveDouble("Gia co ban moi: ", r.getGiaCoBan()));
+    r.setDienTich(ui::nhapTuyChonSoThucDuong("Dien tich moi: ", r.getDienTich()));
+    r.setGiaCoBan(ui::nhapTuyChonSoThucDuong("Gia co ban moi: ", r.getGiaCoBan()));
 
     if (r.getTrangThai() == "Dang thue") {
         cout << "Phong dang co nguoi thue nen khong doi duoc trang thai." << endl;
     } else {
         cout << "Trang thai moi: 1. Trong  2. Dang sua chua" << endl;
-        string tt = ui::readText("Chon (Enter de giu nguyen): ", true);
+        string tt = ui::nhapChuoi("Chon (Enter de giu nguyen): ", true);
         if (tt == "1") r.setTrangThai("Trong");
         else if (tt == "2") r.setTrangThai("Dang sua chua");
         else if (!tt.empty()) cout << "Lua chon khong hop le, giu nguyen trang thai." << endl;
     }
 
     rooms.insert(ma, r);
-    UndoAction a("SUA_PHONG");
+    ThaoTacHoanTac a("SUA_PHONG");
     a.phongTruoc = truoc;
     a.phongSau = r;
-    undoStack.push(a);
+    nganXepHoanTac.push(a);
 
     cout << "Da cap nhat phong:" << endl;
     r.display();
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::xoaPhong() {
-    string ma = ui::toUpper(ui::readText("Nhap ma phong can xoa: ", false));
+    string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma phong can xoa: ", false));
     Room r;
     if (!rooms.search(ma, r)) {
         cout << "Khong tim thay phong " << ma << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     r.display();
     if (r.getTrangThai() == "Dang thue") {
         cout << "Phong dang co nguoi thue, khong the xoa. Hay lam thu tuc tra phong truoc." << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
-    if (ui::confirm("Ban co chac muon xoa phong " + ma + "?")) {
+    if (ui::xacNhan("Ban co chac muon xoa phong " + ma + "?")) {
         rooms.remove(ma);
-        UndoAction a("XOA_PHONG");
+        ThaoTacHoanTac a("XOA_PHONG");
         a.phongTruoc = r;
-        undoStack.push(a);
+        nganXepHoanTac.push(a);
         cout << "Da xoa phong " << ma << endl;
     } else {
         cout << "Da huy." << endl;
     }
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::timPhong() {
-    string ma = ui::toUpper(ui::readText("Nhap ma phong can tim: ", false));
+    string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma phong can tim: ", false));
     Room r;
     if (!rooms.search(ma, r)) {
         cout << "Khong tim thay phong " << ma << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     r.display();
@@ -616,7 +378,7 @@ inline void AdminMenu::timPhong() {
             t.display();
         }
     }
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::xemDanhSachPhong() const {
@@ -626,7 +388,7 @@ inline void AdminMenu::xemDanhSachPhong() const {
     } else {
         rooms.inorderTraverse([](const Room& r) { r.display(); });
     }
-    ui::pause();
+    ui::tamDung();
 }
 
 inline int AdminMenu::inPhongTrong() const {
@@ -644,7 +406,7 @@ inline int AdminMenu::inPhongTrong() const {
 
 inline void AdminMenu::xemPhongTrong() const {
     inPhongTrong();
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::inKhachCho(const Tenant& t) const {
@@ -654,10 +416,10 @@ inline void AdminMenu::inKhachCho(const Tenant& t) const {
          << " | SDT: " << t.getSoDienThoai() << endl;
 }
 
-inline void AdminMenu::checkinMenu() {
+inline void AdminMenu::menuCheckin() {
     int choice;
     do {
-        ui::clearScreen();
+        ui::xoaManHinh();
         cout << "======== CHECK-IN (HANG DOI) ========" << endl;
         cout << "So khach dang cho: " << checkinQueue.size() << endl;
         Tenant dauHang;
@@ -670,7 +432,7 @@ inline void AdminMenu::checkinMenu() {
         cout << "2. Xu ly khach dau hang (xep phong + tao hop dong)" << endl;
         cout << "3. Xem danh sach khach dang cho" << endl;
         cout << "0. Quay lai" << endl;
-        choice = ui::readInt("Chon: ");
+        choice = ui::nhapSoNguyen("Chon: ");
 
         switch (choice) {
             case 1: dangKyCheckin(); break;
@@ -679,7 +441,7 @@ inline void AdminMenu::checkinMenu() {
             case 0: break;
             default:
                 cout << "Lua chon khong hop le!" << endl;
-                ui::pause();
+                ui::tamDung();
         }
     } while (choice != 0);
 }
@@ -700,7 +462,7 @@ inline void AdminMenu::capNhatBoDemKhach() {
         string id = t.getMaNguoiThue();
         if (id.size() > 2 && id.compare(0, 2, "TN") == 0) {
             string rest = id.substr(2);
-            if (ui::isAllDigits(rest) && rest.size() <= 9) {
+            if (ui::laChuSo(rest) && rest.size() <= 9) {
                 int v = stoi(rest);
                 if (v > tenantCounter) tenantCounter = v;
             }
@@ -726,12 +488,12 @@ inline void AdminMenu::xemHangDoi() {
         cout << ++stt << ". ";
         inKhachCho(t);
     });
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::dangKyCheckin() {
-    string ten = ui::readText("Ho ten: ", false);
-    string cccd = ui::readDigits("CCCD (12 so): ", 12, false);
+    string ten = ui::nhapChuoi("Ho ten: ", false);
+    string cccd = ui::nhapChuSo("CCCD (12 so): ", 12, false);
 
     Tenant daO;
     bool trung = tenants.findIf([&cccd](const Tenant& x) {
@@ -739,67 +501,67 @@ inline void AdminMenu::dangKyCheckin() {
     }, daO);
     if (trung) {
         cout << "CCCD nay dang thue phong " << daO.getMaPhong() << " (khach " << daO.getMaNguoiThue() << ")!" << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
 
     if (cccdDangCho(cccd)) {
         cout << "CCCD nay da co trong hang doi!" << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
 
-    string sdt = ui::readDigits("So dien thoai (10 so): ", 10, false);
+    string sdt = ui::nhapChuSo("So dien thoai (10 so): ", 10, false);
 
     string ma = taoMa("TN", ++tenantCounter);
     Tenant t(ma, ten, cccd, sdt, "", 0, "");
     checkinQueue.enqueue(t);
 
     cout << "Da them vao hang doi. Ma khach: " << ma << " (vi tri: " << checkinQueue.size() << ")" << endl;
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::xuLyCheckin() {
     Tenant t;
     if (!checkinQueue.front(t)) {
         cout << "Khong co khach nao dang cho." << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     cout << "Khach dau hang: ";
     inKhachCho(t);
 
     if (inPhongTrong() == 0) {
-        ui::pause();
+        ui::tamDung();
         return;
     }
 
-    string maPhong = ui::toUpper(ui::readText("Chon ma phong: ", false));
+    string maPhong = ui::vietHoa(ui::nhapChuoi("Chon ma phong: ", false));
     Room r;
     if (!rooms.search(maPhong, r)) {
         cout << "Khong tim thay phong " << maPhong << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     if (!r.isTrong()) {
         cout << "Phong " << maPhong << " khong trong (" << r.getTrangThai() << ")!" << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
 
-    string ngay = ui::readDate("Ngay check-in (YYYY-MM-DD): ");
-    int thoiHan = ui::readPositiveInt("Thoi han hop dong (thang): ");
-    double coc = ui::readOptionalPositiveDouble("Tien coc (Enter = bang gia phong): ", r.getGiaCoBan());
+    string ngay = ui::nhapNgay("Ngay check-in (YYYY-MM-DD): ");
+    int thoiHan = ui::nhapSoNguyenDuong("Thoi han hop dong (thang): ");
+    double coc = ui::nhapTuyChonSoThucDuong("Tien coc (Enter = bang gia phong): ", r.getGiaCoBan());
 
-    if (!ui::confirm("Xac nhan xep khach " + t.getHoTen() + " vao phong " + maPhong + "?")) {
+    if (!ui::xacNhan("Xac nhan xep khach " + t.getHoTen() + " vao phong " + maPhong + "?")) {
         cout << "Da huy." << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
 
     Tenant chinhThuc(t.getMaNguoiThue(), t.getHoTen(), t.getCccd(), t.getSoDienThoai(),
                      maPhong, coc, ngay);
-    string maHD = taoMa("HD", nextNumber(contracts, "HD"));
+    string maHD = taoMa("HD", soTiepTheo(contracts, "HD"));
     Contract hd(maHD, maPhong, chinhThuc.getMaNguoiThue(), ngay, thoiHan, coc);
 
     tenants.insertBack(chinhThuc);
@@ -814,13 +576,13 @@ inline void AdminMenu::xuLyCheckin() {
     cout << "Check-in thanh cong!" << endl;
     chinhThuc.display();
     hd.display();
-    ui::pause();
+    ui::tamDung();
 }
 
-inline void AdminMenu::tenantMenu() {
+inline void AdminMenu::menuKhach() {
     int choice;
     do {
-        ui::clearScreen();
+        ui::xoaManHinh();
         cout << "======== QUAN LY KHACH THUE ========" << endl;
         cout << "1. Xem tat ca khach" << endl;
         cout << "2. Xem khach dang o" << endl;
@@ -829,7 +591,7 @@ inline void AdminMenu::tenantMenu() {
         cout << "5. Tra phong (check-out)" << endl;
         cout << "6. Xoa khach da tra phong" << endl;
         cout << "0. Quay lai" << endl;
-        choice = ui::readInt("Chon: ");
+        choice = ui::nhapSoNguyen("Chon: ");
 
         switch (choice) {
             case 1: xemKhach(false); break;
@@ -841,7 +603,7 @@ inline void AdminMenu::tenantMenu() {
             case 0: break;
             default:
                 cout << "Lua chon khong hop le!" << endl;
-                ui::pause();
+                ui::tamDung();
         }
     } while (choice != 0);
 }
@@ -856,34 +618,34 @@ inline void AdminMenu::xemKhach(bool chiDangO) const {
         }
     });
     if (dem == 0) cout << "(Khong co khach nao)" << endl;
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::timKhach() {
-    string ma = ui::toUpper(ui::readText("Nhap ma khach can tim: ", false));
+    string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma khach can tim: ", false));
     Tenant t;
     if (tenants.findIf([&ma](const Tenant& x) { return x.getMaNguoiThue() == ma; }, t)) {
         t.display();
     } else {
         cout << "Khong tim thay khach " << ma << endl;
     }
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::suaKhach() {
-    string ma = ui::toUpper(ui::readText("Nhap ma khach can sua: ", false));
+    string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma khach can sua: ", false));
     Tenant t;
     if (!tenants.findIf([&ma](const Tenant& x) { return x.getMaNguoiThue() == ma; }, t)) {
         cout << "Khong tim thay khach " << ma << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     t.display();
     cout << "(Nhan Enter de giu nguyen gia tri cu)" << endl;
 
-    string ten = ui::readText("Ho ten moi: ", true);
-    string cccd = ui::readDigits("CCCD moi (12 so): ", 12, true);
-    string sdt = ui::readDigits("SDT moi (10 so): ", 10, true);
+    string ten = ui::nhapChuoi("Ho ten moi: ", true);
+    string cccd = ui::nhapChuSo("CCCD moi (12 so): ", 12, true);
+    string sdt = ui::nhapChuSo("SDT moi (10 so): ", 10, true);
 
     tenants.updateIf(
         [&ma](const Tenant& x) { return x.getMaNguoiThue() == ma; },
@@ -894,20 +656,20 @@ inline void AdminMenu::suaKhach() {
         });
 
     cout << "Da cap nhat." << endl;
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::traPhong() {
-    string ma = ui::toUpper(ui::readText("Nhap ma khach tra phong: ", false));
+    string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma khach tra phong: ", false));
     Tenant t;
     if (!tenants.findIf([&ma](const Tenant& x) { return x.getMaNguoiThue() == ma; }, t)) {
         cout << "Khong tim thay khach " << ma << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     if (t.getTrangThai() != "Dang o") {
         cout << "Khach nay da tra phong roi." << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
 
@@ -921,9 +683,9 @@ inline void AdminMenu::traPhong() {
         cout << "CANH BAO: phong " << phong << " con " << chuaThu << " hoa don chua thanh toan!" << endl;
     }
 
-    if (!ui::confirm("Xac nhan tra phong " + phong + " cho khach " + t.getHoTen() + "?")) {
+    if (!ui::xacNhan("Xac nhan tra phong " + phong + " cho khach " + t.getHoTen() + "?")) {
         cout << "Da huy." << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
 
@@ -938,45 +700,45 @@ inline void AdminMenu::traPhong() {
 
     cout << "Tra phong thanh cong. Phong " << phong << " da tro ve trang thai Trong." << endl;
     cout << "Tien coc can hoan lai: " << t.getTienCoc() << " VND" << endl;
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::xoaKhach() {
-    string ma = ui::toUpper(ui::readText("Nhap ma khach can xoa: ", false));
+    string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma khach can xoa: ", false));
     Tenant t;
     if (!tenants.findIf([&ma](const Tenant& x) { return x.getMaNguoiThue() == ma; }, t)) {
         cout << "Khong tim thay khach " << ma << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     t.display();
     if (t.getTrangThai() == "Dang o") {
         cout << "Khach dang o, hay lam thu tuc tra phong truoc." << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     Contract hd;
     if (contracts.findIf([&ma](const Contract& c) { return c.getMaNguoiThue() == ma; }, hd)) {
         cout << "Khach con hop dong " << hd.getMaHopDong() << ", hay xoa hop dong truoc." << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
-    if (ui::confirm("Ban co chac muon xoa khach " + ma + "?")) {
-        UndoAction a("XOA_KHACH");
+    if (ui::xacNhan("Ban co chac muon xoa khach " + ma + "?")) {
+        ThaoTacHoanTac a("XOA_KHACH");
         a.khach = t;
-        undoStack.push(a);
+        nganXepHoanTac.push(a);
         tenants.removeIf([&ma](const Tenant& x) { return x.getMaNguoiThue() == ma; });
         cout << "Da xoa khach " << ma << endl;
     } else {
         cout << "Da huy." << endl;
     }
-    ui::pause();
+    ui::tamDung();
 }
 
-inline void AdminMenu::contractMenu() {
+inline void AdminMenu::menuHopDong() {
     int choice;
     do {
-        ui::clearScreen();
+        ui::xoaManHinh();
         cout << "======== QUAN LY HOP DONG ========" << endl;
         cout << "1. Xem tat ca hop dong" << endl;
         cout << "2. Xem hop dong con hieu luc" << endl;
@@ -985,7 +747,7 @@ inline void AdminMenu::contractMenu() {
         cout << "5. Xoa hop dong da ket thuc" << endl;
         cout << "6. Sua tien coc hop dong" << endl;
         cout << "0. Quay lai" << endl;
-        choice = ui::readInt("Chon: ");
+        choice = ui::nhapSoNguyen("Chon: ");
 
         switch (choice) {
             case 1: xemHopDong(false); break;
@@ -997,7 +759,7 @@ inline void AdminMenu::contractMenu() {
             case 0: break;
             default:
                 cout << "Lua chon khong hop le!" << endl;
-                ui::pause();
+                ui::tamDung();
         }
     } while (choice != 0);
 }
@@ -1012,35 +774,35 @@ inline void AdminMenu::xemHopDong(bool chiConHieuLuc) const {
         }
     });
     if (dem == 0) cout << "(Khong co hop dong nao)" << endl;
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::timHopDong() {
-    string ma = ui::toUpper(ui::readText("Nhap ma hop dong can tim: ", false));
+    string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma hop dong can tim: ", false));
     Contract c;
     if (contracts.findIf([&ma](const Contract& x) { return x.getMaHopDong() == ma; }, c)) {
         c.display();
     } else {
         cout << "Khong tim thay hop dong " << ma << endl;
     }
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::giaHanHopDong() {
-    string ma = ui::toUpper(ui::readText("Nhap ma hop dong can gia han: ", false));
+    string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma hop dong can gia han: ", false));
     Contract c;
     if (!contracts.findIf([&ma](const Contract& x) { return x.getMaHopDong() == ma; }, c)) {
         cout << "Khong tim thay hop dong " << ma << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     if (!c.isConHieuLuc()) {
         cout << "Hop dong da ket thuc, khong gia han duoc." << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     c.display();
-    int them = ui::readPositiveInt("Gia han them (thang): ");
+    int them = ui::nhapSoNguyenDuong("Gia han them (thang): ");
     int thoiHanMoi = c.getThoiHan() + them;
 
     contracts.updateIf(
@@ -1048,56 +810,56 @@ inline void AdminMenu::giaHanHopDong() {
         [thoiHanMoi](Contract& x) { x.setThoiHan(thoiHanMoi); });
 
     cout << "Da gia han. Thoi han moi: " << thoiHanMoi << " thang." << endl;
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::xoaHopDong() {
-    string ma = ui::toUpper(ui::readText("Nhap ma hop dong can xoa: ", false));
+    string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma hop dong can xoa: ", false));
     Contract c;
     if (!contracts.findIf([&ma](const Contract& x) { return x.getMaHopDong() == ma; }, c)) {
         cout << "Khong tim thay hop dong " << ma << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     c.display();
     if (c.isConHieuLuc()) {
         cout << "Hop dong con hieu luc, hay lam thu tuc tra phong truoc." << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
-    if (ui::confirm("Ban co chac muon xoa hop dong " + ma + "?")) {
-        UndoAction a("XOA_HOPDONG");
+    if (ui::xacNhan("Ban co chac muon xoa hop dong " + ma + "?")) {
+        ThaoTacHoanTac a("XOA_HOPDONG");
         a.hopDong = c;
-        undoStack.push(a);
+        nganXepHoanTac.push(a);
         contracts.removeIf([&ma](const Contract& x) { return x.getMaHopDong() == ma; });
         cout << "Da xoa hop dong " << ma << endl;
     } else {
         cout << "Da huy." << endl;
     }
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::suaTienCoc() {
-    string ma = ui::toUpper(ui::readText("Nhap ma hop dong can sua tien coc: ", false));
+    string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma hop dong can sua tien coc: ", false));
     Contract c;
     if (!contracts.findIf([&ma](const Contract& x) { return x.getMaHopDong() == ma; }, c)) {
         cout << "Khong tim thay hop dong " << ma << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     if (!c.isConHieuLuc()) {
         cout << "Hop dong da ket thuc, khong sua duoc." << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     c.display();
-    double cocMoi = ui::readOptionalPositiveDouble("Tien coc moi (Enter de giu nguyen): ", c.getTienCoc());
+    double cocMoi = ui::nhapTuyChonSoThucDuong("Tien coc moi (Enter de giu nguyen): ", c.getTienCoc());
     string maKhach = c.getMaNguoiThue();
 
-    UndoAction a("SUA_COC");
+    ThaoTacHoanTac a("SUA_COC");
     a.hopDong = c;
     tenants.findIf([&maKhach](const Tenant& x) { return x.getMaNguoiThue() == maKhach; }, a.khach);
-    undoStack.push(a);
+    nganXepHoanTac.push(a);
 
     contracts.updateIf(
         [&ma](const Contract& x) { return x.getMaHopDong() == ma; },
@@ -1107,13 +869,13 @@ inline void AdminMenu::suaTienCoc() {
         [cocMoi](Tenant& x) { x.setTienCoc(cocMoi); });
 
     cout << "Da cap nhat tien coc: " << cocMoi << " VND (hop dong va khach thue)." << endl;
-    ui::pause();
+    ui::tamDung();
 }
 
-inline void AdminMenu::invoiceMenu() {
+inline void AdminMenu::menuHoaDon() {
     int choice;
     do {
-        ui::clearScreen();
+        ui::xoaManHinh();
         cout << "======== QUAN LY HOA DON ========" << endl;
         cout << "1. Lap hoa don thang moi" << endl;
         cout << "2. Xem tat ca hoa don" << endl;
@@ -1123,7 +885,7 @@ inline void AdminMenu::invoiceMenu() {
         cout << "6. Xoa hoa don chua thanh toan" << endl;
         cout << "7. Sua chi so hoa don chua thanh toan" << endl;
         cout << "0. Quay lai" << endl;
-        choice = ui::readInt("Chon: ");
+        choice = ui::nhapSoNguyen("Chon: ");
 
         switch (choice) {
             case 1: lapHoaDon(); break;
@@ -1136,33 +898,33 @@ inline void AdminMenu::invoiceMenu() {
             case 0: break;
             default:
                 cout << "Lua chon khong hop le!" << endl;
-                ui::pause();
+                ui::tamDung();
         }
     } while (choice != 0);
 }
 
 inline void AdminMenu::lapHoaDon() {
-    string maPhong = ui::toUpper(ui::readText("Ma phong: ", false));
+    string maPhong = ui::vietHoa(ui::nhapChuoi("Ma phong: ", false));
     Room r;
     if (!rooms.search(maPhong, r)) {
         cout << "Khong tim thay phong " << maPhong << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     if (r.getTrangThai() != "Dang thue") {
         cout << "Phong " << maPhong << " khong co nguoi thue, khong lap hoa don." << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
 
-    string thang = ui::readMonth("Thang (YYYY-MM): ");
+    string thang = ui::nhapThang("Thang (YYYY-MM): ");
     bool trung = false;
     invoices.traverseForward([&maPhong, &thang, &trung](const Invoice& h) {
         if (h.getMaPhong() == maPhong && h.getThangNam() == thang) trung = true;
     });
     if (trung) {
         cout << "Phong " << maPhong << " da co hoa don thang " << thang << "!" << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
 
@@ -1182,16 +944,16 @@ inline void AdminMenu::lapHoaDon() {
         cout << "Chi so cu lay tu hoa don thang " << thangCu
              << " (dien: " << dienCu << ", nuoc: " << nuocCu << ")" << endl;
     } else {
-        dienCu = ui::readNonNegativeDouble("Chi so dien cu: ");
-        nuocCu = ui::readNonNegativeDouble("Chi so nuoc cu: ");
+        dienCu = ui::nhapSoThucKhongAm("Chi so dien cu: ");
+        nuocCu = ui::nhapSoThucKhongAm("Chi so nuoc cu: ");
     }
 
-    double dienMoi = ui::readDouble("Chi so dien moi: ", dienCu, false);
-    double nuocMoi = ui::readDouble("Chi so nuoc moi: ", nuocCu, false);
-    double giaDien = ui::readOptionalPositiveDouble("Don gia dien (Enter = 3500): ", 3500);
-    double giaNuoc = ui::readOptionalPositiveDouble("Don gia nuoc (Enter = 15000): ", 15000);
+    double dienMoi = ui::nhapSoThuc("Chi so dien moi: ", dienCu, false);
+    double nuocMoi = ui::nhapSoThuc("Chi so nuoc moi: ", nuocCu, false);
+    double giaDien = ui::nhapTuyChonSoThucDuong("Don gia dien (Enter = 3500): ", 3500);
+    double giaNuoc = ui::nhapTuyChonSoThucDuong("Don gia nuoc (Enter = 15000): ", 15000);
 
-    string maHD = taoMa("HDN", nextNumber(invoices, "HDN"));
+    string maHD = taoMa("HDN", soTiepTheo(invoices, "HDN"));
     Invoice hd(maHD, maPhong, thang, dienCu, dienMoi, nuocCu, nuocMoi,
                giaDien, giaNuoc, r.getGiaCoBan());
     invoices.insertBack(hd);
@@ -1199,7 +961,7 @@ inline void AdminMenu::lapHoaDon() {
 
     cout << "Da lap hoa don:" << endl;
     hd.display();
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::xemHoaDon(bool chiChuaThu) const {
@@ -1218,11 +980,11 @@ inline void AdminMenu::xemHoaDon(bool chiChuaThu) const {
     } else {
         cout << "Tong tien chua thu: " << tong << " VND" << endl;
     }
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::xemHoaDonTheoPhong() const {
-    string maPhong = ui::toUpper(ui::readText("Nhap ma phong: ", false));
+    string maPhong = ui::vietHoa(ui::nhapChuoi("Nhap ma phong: ", false));
     cout << "------ HOA DON PHONG " << maPhong << " ------" << endl;
     int dem = 0;
     invoices.traverseForward([&maPhong, &dem](const Invoice& h) {
@@ -1232,24 +994,24 @@ inline void AdminMenu::xemHoaDonTheoPhong() const {
         }
     });
     if (dem == 0) cout << "(Phong nay chua co hoa don nao)" << endl;
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::thanhToanHoaDon() {
-    string ma = ui::toUpper(ui::readText("Nhap ma hoa don: ", false));
+    string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma hoa don: ", false));
     Invoice h;
     if (!invoices.findIf([&ma](const Invoice& x) { return x.getMaHoaDon() == ma; }, h)) {
         cout << "Khong tim thay hoa don " << ma << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     h.display();
     if (h.isDaThanhToan()) {
         cout << "Hoa don nay da thanh toan roi." << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
-    if (ui::confirm("Xac nhan khach da thanh toan " + to_string((long long)h.tinhTongTien()) + " VND?")) {
+    if (ui::xacNhan("Xac nhan khach da thanh toan " + to_string((long long)h.tinhTongTien()) + " VND?")) {
         invoices.updateIf(
             [&ma](const Invoice& x) { return x.getMaHoaDon() == ma; },
             [](Invoice& x) { x.danhDauDaThanhToan(); });
@@ -1258,47 +1020,47 @@ inline void AdminMenu::thanhToanHoaDon() {
     } else {
         cout << "Da huy." << endl;
     }
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::xoaHoaDon() {
-    string ma = ui::toUpper(ui::readText("Nhap ma hoa don can xoa: ", false));
+    string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma hoa don can xoa: ", false));
     Invoice h;
     if (!invoices.findIf([&ma](const Invoice& x) { return x.getMaHoaDon() == ma; }, h)) {
         cout << "Khong tim thay hoa don " << ma << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     h.display();
     if (h.isDaThanhToan()) {
         cout << "Hoa don da thanh toan, khong duoc xoa." << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
-    if (ui::confirm("Ban co chac muon xoa hoa don " + ma + "?")) {
-        UndoAction a("XOA_HOADON");
+    if (ui::xacNhan("Ban co chac muon xoa hoa don " + ma + "?")) {
+        ThaoTacHoanTac a("XOA_HOADON");
         a.hoaDon = h;
-        undoStack.push(a);
+        nganXepHoanTac.push(a);
         invoices.removeIf([&ma](const Invoice& x) { return x.getMaHoaDon() == ma; });
         cout << "Da xoa hoa don " << ma << endl;
     } else {
         cout << "Da huy." << endl;
     }
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::suaChiSoHoaDon() {
-    string ma = ui::toUpper(ui::readText("Nhap ma hoa don can sua chi so: ", false));
+    string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma hoa don can sua chi so: ", false));
     Invoice h;
     if (!invoices.findIf([&ma](const Invoice& x) { return x.getMaHoaDon() == ma; }, h)) {
         cout << "Khong tim thay hoa don " << ma << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     h.display();
     if (h.isDaThanhToan()) {
         cout << "Hoa don da thanh toan, khong sua duoc." << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
 
@@ -1310,22 +1072,22 @@ inline void AdminMenu::suaChiSoHoaDon() {
     });
     if (coMoiHon) {
         cout << "Phong " << maPhong << " da co hoa don thang sau, chi sua duoc hoa don moi nhat." << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
 
     cout << "(Nhan Enter de giu nguyen gia tri hien tai)" << endl;
-    double dienMoi = ui::readOptionalDouble("Chi so dien moi (hien tai " + to_string((long long)h.getChiSoDienMoi()) +
+    double dienMoi = ui::nhapTuyChonSoThuc("Chi so dien moi (hien tai " + to_string((long long)h.getChiSoDienMoi()) +
                                             ", cu " + to_string((long long)h.getChiSoDienCu()) + "): ",
                                             h.getChiSoDienMoi(), h.getChiSoDienCu());
-    double nuocMoi = ui::readOptionalDouble("Chi so nuoc moi (hien tai " + to_string((long long)h.getChiSoNuocMoi()) +
+    double nuocMoi = ui::nhapTuyChonSoThuc("Chi so nuoc moi (hien tai " + to_string((long long)h.getChiSoNuocMoi()) +
                                             ", cu " + to_string((long long)h.getChiSoNuocCu()) + "): ",
                                             h.getChiSoNuocMoi(), h.getChiSoNuocCu());
 
     if (dienMoi != h.getChiSoDienMoi() || nuocMoi != h.getChiSoNuocMoi()) {
-        UndoAction a("SUA_HOADON");
+        ThaoTacHoanTac a("SUA_HOADON");
         a.hoaDon = h;
-        undoStack.push(a);
+        nganXepHoanTac.push(a);
     }
     invoices.updateIf(
         [&ma](const Invoice& x) { return x.getMaHoaDon() == ma; },
@@ -1334,20 +1096,20 @@ inline void AdminMenu::suaChiSoHoaDon() {
     invoices.findIf([&ma](const Invoice& x) { return x.getMaHoaDon() == ma; }, h);
     cout << "Da cap nhat:" << endl;
     h.display();
-    ui::pause();
+    ui::tamDung();
 }
 
-inline void AdminMenu::serviceMenu() {
+inline void AdminMenu::menuDichVu() {
     int choice;
     do {
-        ui::clearScreen();
+        ui::xoaManHinh();
         cout << "======== QUAN LY DICH VU ========" << endl;
         cout << "1. Them dich vu" << endl;
         cout << "2. Sua dich vu" << endl;
         cout << "3. Xoa dich vu" << endl;
         cout << "4. Xem danh sach dich vu" << endl;
         cout << "0. Quay lai" << endl;
-        choice = ui::readInt("Chon: ");
+        choice = ui::nhapSoNguyen("Chon: ");
 
         switch (choice) {
             case 1: themDichVu(); break;
@@ -1357,36 +1119,36 @@ inline void AdminMenu::serviceMenu() {
             case 0: break;
             default:
                 cout << "Lua chon khong hop le!" << endl;
-                ui::pause();
+                ui::tamDung();
         }
     } while (choice != 0);
 }
 
 inline void AdminMenu::themDichVu() {
-    string ten = ui::readText("Ten dich vu: ", false);
-    double gia = ui::readPositiveDouble("Don gia (VND/thang): ");
-    string ma = taoMa("DV", nextNumber(services, "DV"));
+    string ten = ui::nhapChuoi("Ten dich vu: ", false);
+    double gia = ui::nhapSoThucDuong("Don gia (VND/thang): ");
+    string ma = taoMa("DV", soTiepTheo(services, "DV"));
 
     Service s(ma, ten, gia);
     services.insertBack(s);
 
     cout << "Da them dich vu " << ma << ":" << endl;
     s.display();
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::suaDichVu() {
-    string ma = ui::toUpper(ui::readText("Nhap ma dich vu can sua: ", false));
+    string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma dich vu can sua: ", false));
     Service s;
     if (!services.findIf([&ma](const Service& x) { return x.getMaDichVu() == ma; }, s)) {
         cout << "Khong tim thay dich vu " << ma << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     s.display();
     cout << "(Nhan Enter de giu nguyen gia tri cu)" << endl;
-    string ten = ui::readText("Ten moi: ", true);
-    double gia = ui::readOptionalPositiveDouble("Don gia moi: ", s.getDonGia());
+    string ten = ui::nhapChuoi("Ten moi: ", true);
+    double gia = ui::nhapTuyChonSoThucDuong("Don gia moi: ", s.getDonGia());
 
     services.updateIf(
         [&ma](const Service& x) { return x.getMaDichVu() == ma; },
@@ -1396,25 +1158,25 @@ inline void AdminMenu::suaDichVu() {
         });
 
     cout << "Da cap nhat dich vu " << ma << endl;
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::xoaDichVu() {
-    string ma = ui::toUpper(ui::readText("Nhap ma dich vu can xoa: ", false));
+    string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma dich vu can xoa: ", false));
     Service s;
     if (!services.findIf([&ma](const Service& x) { return x.getMaDichVu() == ma; }, s)) {
         cout << "Khong tim thay dich vu " << ma << endl;
-        ui::pause();
+        ui::tamDung();
         return;
     }
     s.display();
-    if (ui::confirm("Ban co chac muon xoa dich vu " + ma + "?")) {
+    if (ui::xacNhan("Ban co chac muon xoa dich vu " + ma + "?")) {
         services.removeIf([&ma](const Service& x) { return x.getMaDichVu() == ma; });
         cout << "Da xoa dich vu " << ma << endl;
     } else {
         cout << "Da huy." << endl;
     }
-    ui::pause();
+    ui::tamDung();
 }
 
 inline void AdminMenu::xemDichVu() const {
@@ -1427,32 +1189,32 @@ inline void AdminMenu::xemDichVu() const {
             s.display();
         });
     }
-    ui::pause();
+    ui::tamDung();
 }
 
-inline bool AdminMenu::run() {
-    if (!login()) {
+inline bool AdminMenu::chay() {
+    if (!dangNhap()) {
         cout << "Dang nhap that bai. Thoat chuong trinh." << endl;
         return false;
     }
 
     int choice;
     do {
-        showMainMenu();
-        choice = ui::readInt("Chon: ");
+        hienThiMenuChinh();
+        choice = ui::nhapSoNguyen("Chon: ");
 
         switch (choice) {
-            case 1: roomMenu(); break;
-            case 2: tenantMenu(); break;
-            case 3: contractMenu(); break;
-            case 4: invoiceMenu(); break;
-            case 5: checkinMenu(); break;
+            case 1: menuPhong(); break;
+            case 2: menuKhach(); break;
+            case 3: menuHopDong(); break;
+            case 4: menuHoaDon(); break;
+            case 5: menuCheckin(); break;
             case 6: hoanTac(); break;
-            case 7: serviceMenu(); break;
+            case 7: menuDichVu(); break;
             case 0: break;
             default:
                 cout << "Lua chon khong hop le!" << endl;
-                ui::pause();
+                ui::tamDung();
         }
     } while (choice != 0);
 

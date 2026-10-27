@@ -38,7 +38,7 @@ int main() {
     docQueueFile(checkinQueue, "data/queue.txt");
 
     AdminMenu menu(rooms, tenants, contracts, invoices, checkinQueue, services);
-    bool canLuu = menu.run();
+    bool canLuu = menu.chay();
 
     if (canLuu) {
         DoublyLinkedList<Room> dsPhong;
