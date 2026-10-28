@@ -7,9 +7,9 @@ using namespace std;
 
 template <typename T>
 struct Node {
-    T data;             // Dữ liệu (Room, Tenant, Invoice...)
-    Node<T>* prev;      // Con trỏ tới node trước
-    Node<T>* next;      // Con trỏ tới node sau
+    T data;          
+    Node<T>* prev;      
+    Node<T>* next;     
 
     // Constructor của Node
     Node(T data) {
@@ -22,12 +22,11 @@ struct Node {
 template <typename T>
 class DoublyLinkedList {
 private:
-    Node<T>* head;      // Con trỏ tới node đầu tiên
-    Node<T>* tail;      // Con trỏ tới node cuối cùng
-    int size;           // Số phần tử hiện có
+    Node<T>* head;     
+    Node<T>* tail;   
+    int size;          
 
 public:
-    // === CONSTRUCTOR & DESTRUCTOR ===
     DoublyLinkedList();
     ~DoublyLinkedList();
 
@@ -101,29 +100,23 @@ public:
         }
     }
 
-    // === THÊM PHẦN TỬ ===
-    void addFront(T data);      // Thêm vào đầu
-    void addBack(T data);       // Thêm vào cuối
 
-    // === XÓA PHẦN TỬ ===
-    bool removeAt(int index);   // Xóa phần tử tại vị trí index
+    void addFront(T data);     
+    void addBack(T data);      
 
-    // === TRUY CẬP ===
+  
+    bool removeAt(int index);  
     Node<T>* getHead() const;
     Node<T>* getTail() const;
-    Node<T>* getNodeAt(int index) const;    // Lấy node tại vị trí index
+    Node<T>* getNodeAt(int index) const;   
     int getSize() const;
     bool isEmpty() const;
 
-    // === HIỂN THỊ ===
-    void displayAll() const;    // Hiển thị tất cả phần tử
+
+    void displayAll() const;   
 };
 
-// ====================================================================
-// ĐỊNH NGHĨA CÁC HÀM (phải nằm trong .h vì là template)
-// ====================================================================
 
-// --- Constructor ---
 template <typename T>
 DoublyLinkedList<T>::DoublyLinkedList() {
     head = nullptr;
@@ -131,39 +124,36 @@ DoublyLinkedList<T>::DoublyLinkedList() {
     size = 0;
 }
 
-// --- Destructor: giải phóng bộ nhớ tất cả node ---
+
 template <typename T>
 DoublyLinkedList<T>::~DoublyLinkedList() {
     Node<T>* current = head;
     while (current != nullptr) {
-        Node<T>* nextNode = current->next;  // Lưu lại node tiếp theo
-        delete current;                      // Xóa node hiện tại
-        current = nextNode;                  // Chuyển sang node tiếp
+        Node<T>* nextNode = current->next; 
+        delete current;                      
+        current = nextNode;                
     }
     head = nullptr;
     tail = nullptr;
     size = 0;
 }
 
-// --- Thêm vào đầu danh sách ---
+
 template <typename T>
 void DoublyLinkedList<T>::addFront(T data) {
     Node<T>* newNode = new Node<T>(data);
 
     if (isEmpty()) {
-        // Danh sách rỗng: node mới vừa là head vừa là tail
         head = newNode;
         tail = newNode;
     } else {
-        // Nối node mới vào trước head cũ
-        newNode->next = head;   // Node mới trỏ tới head cũ
-        head->prev = newNode;   // Head cũ trỏ ngược lại node mới
-        head = newNode;         // Cập nhật head = node mới
+        newNode->next = head;   
+        head->prev = newNode; 
+        head = newNode;         
     }
     size++;
 }
 
-// --- Thêm vào cuối danh sách ---
 template <typename T>
 void DoublyLinkedList<T>::addBack(T data) {
     Node<T>* newNode = new Node<T>(data);
@@ -172,18 +162,14 @@ void DoublyLinkedList<T>::addBack(T data) {
         head = newNode;
         tail = newNode;
     } else {
-        // Nối node mới vào sau tail cũ
-        newNode->prev = tail;   // Node mới trỏ ngược lại tail cũ
-        tail->next = newNode;   // Tail cũ trỏ tới node mới
-        tail = newNode;         // Cập nhật tail = node mới
+        newNode->prev = tail;   
+        tail->next = newNode;   
+        tail = newNode;      
     }
     size++;
 }
-
-// --- Xóa phần tử tại vị trí index (0-based) ---
 template <typename T>
 bool DoublyLinkedList<T>::removeAt(int index) {
-    // Kiểm tra index hợp lệ
     if (index < 0 || index >= size) {
         return false;
     }
@@ -191,45 +177,44 @@ bool DoublyLinkedList<T>::removeAt(int index) {
     Node<T>* toDelete = getNodeAt(index);
     if (toDelete == nullptr) return false;
 
-    // Trường hợp 1: Xóa node duy nhất trong danh sách
     if (size == 1) {
         head = nullptr;
         tail = nullptr;
     }
-    // Trường hợp 2: Xóa node đầu (head)
+
     else if (toDelete == head) {
-        head = head->next;      // Head mới = node thứ 2
-        head->prev = nullptr;   // Head mới không có node trước
-    }
-    // Trường hợp 3: Xóa node cuối (tail)
-    else if (toDelete == tail) {
-        tail = tail->prev;      // Tail mới = node áp cuối
-        tail->next = nullptr;   // Tail mới không có node sau
-    }
-    // Trường hợp 4: Xóa node ở giữa
-    else {
-        toDelete->prev->next = toDelete->next;  // Node trước trỏ qua node sau
-        toDelete->next->prev = toDelete->prev;  // Node sau trỏ ngược lại node trước
+        head = head->next;      
+        head->prev = nullptr; 
     }
 
-    delete toDelete;    // Giải phóng bộ nhớ
+    else if (toDelete == tail) {
+        tail = tail->prev;      
+        tail->next = nullptr;  
+    }
+  
+    else {
+        toDelete->prev->next = toDelete->next;  
+        toDelete->next->prev = toDelete->prev; 
+    }
+
+    delete toDelete;    
     size--;
     return true;
 }
 
-// --- Lấy node đầu ---
+
 template <typename T>
 Node<T>* DoublyLinkedList<T>::getHead() const {
     return head;
 }
 
-// --- Lấy node cuối ---
+
 template <typename T>
 Node<T>* DoublyLinkedList<T>::getTail() const {
     return tail;
 }
 
-// --- Lấy node tại vị trí index (0-based) ---
+
 template <typename T>
 Node<T>* DoublyLinkedList<T>::getNodeAt(int index) const {
     if (index < 0 || index >= size) {
@@ -238,15 +223,14 @@ Node<T>* DoublyLinkedList<T>::getNodeAt(int index) const {
 
     Node<T>* current;
 
-    // Tối ưu: nếu index gần đầu thì duyệt từ head, gần cuối thì duyệt từ tail
+  
     if (index <= size / 2) {
-        // Duyệt từ đầu
+
         current = head;
         for (int i = 0; i < index; i++) {
             current = current->next;
         }
     } else {
-        // Duyệt từ cuối (ưu điểm của Doubly so với Singly!)
         current = tail;
         for (int i = size - 1; i > index; i--) {
             current = current->prev;
@@ -256,19 +240,18 @@ Node<T>* DoublyLinkedList<T>::getNodeAt(int index) const {
     return current;
 }
 
-// --- Số phần tử ---
+
 template <typename T>
 int DoublyLinkedList<T>::getSize() const {
     return size;
 }
 
-// --- Kiểm tra rỗng ---
 template <typename T>
 bool DoublyLinkedList<T>::isEmpty() const {
     return size == 0;
 }
 
-// --- Hiển thị tất cả phần tử ---
+
 template <typename T>
 void DoublyLinkedList<T>::displayAll() const {
     if (isEmpty()) {
@@ -280,11 +263,11 @@ void DoublyLinkedList<T>::displayAll() const {
     int index = 0;
     while (current != nullptr) {
         cout << "[" << index << "] ";
-        current->data.display();    // Gọi hàm display() của T (Room, Tenant...)
+        current->data.display(); 
         cout << endl;
         current = current->next;
         index++;
     }
 }
 
-#endif // DOUBLYLINKEDLIST_H
+#endif 
