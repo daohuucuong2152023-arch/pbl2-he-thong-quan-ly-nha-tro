@@ -10,7 +10,7 @@
 using namespace std;
 
 namespace ui {
-    // --- Các hàm tiện ích console & chuỗi ---
+    //Các hàm tiện ích console & chuỗi
     void xoaManHinh();
     void tamDung();
     string catKhoangTrang(const string& s);
@@ -19,7 +19,7 @@ namespace ui {
     bool laThangHopLe(const string& s);
     bool laNgayHopLe(const string& s);
 
-    // --- Các hàm nhập liệu có kiểm tra ---
+    //Các hàm nhập liệu có kiểm tra
     string docDong(const string& prompt);
     string nhapChuoi(const string& prompt, bool allowEmpty);
     int nhapSoNguyen(const string& prompt);
@@ -35,7 +35,7 @@ namespace ui {
     bool xacNhan(const string& prompt);
     string nhapMatKhau(const string& prompt);
 
-    // --- Bí danh tương thích (Aliases) ---
+    //Bí danh tương thích 
     inline void clearScreen() { xoaManHinh(); }
     inline void pause() { tamDung(); }
     inline string trim(const string& s) { return catKhoangTrang(s); }

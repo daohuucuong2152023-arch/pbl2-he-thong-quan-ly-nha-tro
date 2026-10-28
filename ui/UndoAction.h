@@ -24,8 +24,6 @@ struct ThaoTacHoanTac {
 inline ThaoTacHoanTac::ThaoTacHoanTac() {}
 
 inline ThaoTacHoanTac::ThaoTacHoanTac(const string& l) : loai(l) {}
-
-// Bí danh tương thích ngược
 using UndoAction = ThaoTacHoanTac;
 
 #endif
