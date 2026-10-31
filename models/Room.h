@@ -17,7 +17,7 @@ public:
     Room();
     Room(string ma, double dt, double gia, string tt = "Trong");
 
-    // ---- Getter/Setter ----
+
     string getMaPhong() const;
     void setMaPhong(const string& ma);
 
@@ -37,7 +37,6 @@ public:
     void display() const override;
 };
 
-// ====== ĐỊNH NGHĨA Ở DƯỚI ======
 
 inline Room::Room() : dienTich(0), giaCoBan(0), trangThai("Trong") {}
 

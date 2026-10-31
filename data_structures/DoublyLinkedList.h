@@ -24,14 +24,14 @@ class DoublyLinkedList {
 private:
     Node<T>* head;     
     Node<T>* tail;   
-    int size;          
+    int count;          
 
 public:
     DoublyLinkedList();
     ~DoublyLinkedList();
 
     DoublyLinkedList(const DoublyLinkedList<T>& other)
-        : head(nullptr), tail(nullptr), size(0) {
+        : head(nullptr), tail(nullptr), count(0) {
         for (Node<T>* cur = other.head; cur != nullptr; cur = cur->next) {
             addBack(cur->data);
         }
@@ -42,13 +42,13 @@ public:
         DoublyLinkedList<T> copy(other);
         Node<T>* oldHead = head;
         Node<T>* oldTail = tail;
-        int oldSize = size;
+        int oldCount = count;
         head = copy.head;
         tail = copy.tail;
-        size = copy.size;
+        count = copy.count;
         copy.head = oldHead;
         copy.tail = oldTail;
-        copy.size = oldSize;
+        copy.count = oldCount;
         return *this;
     }
 
@@ -109,6 +109,7 @@ public:
     Node<T>* getHead() const;
     Node<T>* getTail() const;
     Node<T>* getNodeAt(int index) const;   
+    int size() const;
     int getSize() const;
     bool isEmpty() const;
 
@@ -121,7 +122,7 @@ template <typename T>
 DoublyLinkedList<T>::DoublyLinkedList() {
     head = nullptr;
     tail = nullptr;
-    size = 0;
+    count = 0;
 }
 
 
@@ -135,7 +136,7 @@ DoublyLinkedList<T>::~DoublyLinkedList() {
     }
     head = nullptr;
     tail = nullptr;
-    size = 0;
+    count = 0;
 }
 
 
@@ -151,7 +152,7 @@ void DoublyLinkedList<T>::addFront(T data) {
         head->prev = newNode; 
         head = newNode;         
     }
-    size++;
+    count++;
 }
 
 template <typename T>
@@ -166,18 +167,18 @@ void DoublyLinkedList<T>::addBack(T data) {
         tail->next = newNode;   
         tail = newNode;      
     }
-    size++;
+    count++;
 }
 template <typename T>
 bool DoublyLinkedList<T>::removeAt(int index) {
-    if (index < 0 || index >= size) {
+    if (index < 0 || index >= count) {
         return false;
     }
 
     Node<T>* toDelete = getNodeAt(index);
     if (toDelete == nullptr) return false;
 
-    if (size == 1) {
+    if (count == 1) {
         head = nullptr;
         tail = nullptr;
     }
@@ -198,7 +199,7 @@ bool DoublyLinkedList<T>::removeAt(int index) {
     }
 
     delete toDelete;    
-    size--;
+    count--;
     return true;
 }
 
@@ -217,14 +218,14 @@ Node<T>* DoublyLinkedList<T>::getTail() const {
 
 template <typename T>
 Node<T>* DoublyLinkedList<T>::getNodeAt(int index) const {
-    if (index < 0 || index >= size) {
+    if (index < 0 || index >= count) {
         return nullptr;
     }
 
     Node<T>* current;
 
   
-    if (index <= size / 2) {
+    if (index <= count / 2) {
 
         current = head;
         for (int i = 0; i < index; i++) {
@@ -232,7 +233,7 @@ Node<T>* DoublyLinkedList<T>::getNodeAt(int index) const {
         }
     } else {
         current = tail;
-        for (int i = size - 1; i > index; i--) {
+        for (int i = count - 1; i > index; i--) {
             current = current->prev;
         }
     }
@@ -242,13 +243,18 @@ Node<T>* DoublyLinkedList<T>::getNodeAt(int index) const {
 
 
 template <typename T>
+int DoublyLinkedList<T>::size() const {
+    return count;
+}
+
+template <typename T>
 int DoublyLinkedList<T>::getSize() const {
-    return size;
+    return count;
 }
 
 template <typename T>
 bool DoublyLinkedList<T>::isEmpty() const {
-    return size == 0;
+    return count == 0;
 }
 
 

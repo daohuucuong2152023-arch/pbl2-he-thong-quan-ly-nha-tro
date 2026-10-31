@@ -4,39 +4,34 @@
 #include <iostream>
 #include <string>
 
-#include "../data_structures/BST.h"
-#include "../data_structures/DoublyLinkedList.h"
-#include "../data_structures/Queue.h"
-#include "../data_structures/Stack.h"
 #include "../models/Room.h"
 #include "../models/Tenant.h"
 #include "../models/Contract.h"
 #include "../models/Invoice.h"
 #include "../models/Service.h"
+#include "../services/RoomService.h"
+#include "../services/TenantService.h"
+#include "../services/ContractService.h"
+#include "../services/InvoiceService.h"
+#include "../services/CheckinService.h"
+#include "../services/DichVuService.h"
+#include "../services/UndoService.h"
 #include "InputHelper.h"
-#include "UndoAction.h"
 
 using namespace std;
 
 class AdminMenu {
 private:
-    BST<Room>& rooms;
-    DoublyLinkedList<Tenant>& tenants;
-    DoublyLinkedList<Contract>& contracts;
-    DoublyLinkedList<Invoice>& invoices;
-    Queue<Tenant>& checkinQueue;
-    DoublyLinkedList<Service>& services;
-    Stack<ThaoTacHoanTac> nganXepHoanTac;
-    int tenantCounter;
+    RoomService& roomService;
+    TenantService& tenantService;
+    ContractService& contractService;
+    InvoiceService& invoiceService;
+    CheckinService& checkinService;
+    DichVuService& dichVuService;
+    UndoService& undoService;
 
     bool dangNhap();
     void hienThiMenuChinh() const;
-
-    template <class T>
-    int soTiepTheo(const DoublyLinkedList<T>& ds, const string& prefix) const;
-    string taoMa(const string& prefix, int number) const;
-    bool capNhatTrangThaiPhong(const string& maPhong, const string& trangThai);
-    void xoaLichSuHoanTac();
     void hoanTac();
 
     void menuPhong();
@@ -50,10 +45,6 @@ private:
 
     void menuCheckin();
     void inKhachCho(const Tenant& t) const;
-    template <class Func>
-    void duyetHangDoi(Func visit);
-    void capNhatBoDemKhach();
-    bool cccdDangCho(const string& cccd);
     void xemHangDoi();
     void dangKyCheckin();
     void xuLyCheckin();
@@ -87,26 +78,23 @@ private:
     void xemDichVu() const;
 
 public:
-    AdminMenu(BST<Room>& r,
-              DoublyLinkedList<Tenant>& t,
-              DoublyLinkedList<Contract>& c,
-              DoublyLinkedList<Invoice>& i,
-              Queue<Tenant>& q,
-              DoublyLinkedList<Service>& s);
+    AdminMenu(RoomService& rs,
+              TenantService& ts,
+              ContractService& cs,
+              InvoiceService& is,
+              CheckinService& cis,
+              DichVuService& dvs,
+              UndoService& us)
+        : roomService(rs),
+          tenantService(ts),
+          contractService(cs),
+          invoiceService(is),
+          checkinService(cis),
+          dichVuService(dvs),
+          undoService(us) {}
 
     bool chay();
 };
-
-inline AdminMenu::AdminMenu(BST<Room>& r,
-                            DoublyLinkedList<Tenant>& t,
-                            DoublyLinkedList<Contract>& c,
-                            DoublyLinkedList<Invoice>& i,
-                            Queue<Tenant>& q,
-                            DoublyLinkedList<Service>& s)
-    : rooms(r), tenants(t), contracts(c), invoices(i), checkinQueue(q), services(s), tenantCounter(0) {
-    tenantCounter = soTiepTheo(tenants, "TN") - 1;
-    capNhatBoDemKhach();
-}
 
 inline bool AdminMenu::dangNhap() {
     const string ADMIN_USER = "admin";
@@ -129,26 +117,15 @@ inline bool AdminMenu::dangNhap() {
 
 inline void AdminMenu::hienThiMenuChinh() const {
     int tongPhong = 0, phongTrong = 0;
-    rooms.inorderTraverse([&tongPhong, &phongTrong](const Room& r) {
-        tongPhong++;
-        if (r.isTrong()) phongTrong++;
-    });
-
-    int khachDangO = 0;
-    tenants.traverseForward([&khachDangO](const Tenant& t) {
-        if (t.getTrangThai() == "Dang o") khachDangO++;
-    });
-
-    int hoaDonChuaThu = 0;
-    invoices.traverseForward([&hoaDonChuaThu](const Invoice& h) {
-        if (!h.isDaThanhToan()) hoaDonChuaThu++;
-    });
+    roomService.demPhong(tongPhong, phongTrong);
+    int khachDangO = tenantService.demKhachDangO();
+    int hoaDonChuaThu = invoiceService.demHoaDonChuaThu();
 
     ui::xoaManHinh();
     cout << "========== QUAN LY NHA TRO ==========" << endl;
     cout << "Phong: " << tongPhong << " (trong: " << phongTrong << ")"
          << " | Khach dang o: " << khachDangO << endl;
-    cout << "Cho check-in: " << checkinQueue.size()
+    cout << "Cho check-in: " << checkinService.soLuongDangCho()
          << " | Hoa don chua thu: " << hoaDonChuaThu << endl;
     cout << "-------------------------------------" << endl;
     cout << "1. Quan ly phong" << endl;
@@ -156,93 +133,16 @@ inline void AdminMenu::hienThiMenuChinh() const {
     cout << "3. Quan ly hop dong" << endl;
     cout << "4. Quan ly hoa don" << endl;
     cout << "5. Check-in (hang doi)" << endl;
-    cout << "6. Hoan tac thao tac gan nhat (" << nganXepHoanTac.size() << ")" << endl;
+    cout << "6. Hoan tac thao tac gan nhat (" << undoService.kichThuoc() << ")" << endl;
     cout << "7. Quan ly dich vu" << endl;
     cout << "0. Luu va thoat" << endl;
     cout << "-------------------------------------" << endl;
 }
 
-template <class T>
-int AdminMenu::soTiepTheo(const DoublyLinkedList<T>& ds, const string& prefix) const {
-    int maxNo = 0;
-    ds.traverseForward([&maxNo, &prefix](const T& x) {
-        string id = x.getId();
-        if (id.size() > prefix.size() && id.compare(0, prefix.size(), prefix) == 0) {
-            string rest = id.substr(prefix.size());
-            if (ui::laChuSo(rest) && rest.size() <= 9) {
-                int n = stoi(rest);
-                if (n > maxNo) maxNo = n;
-            }
-        }
-    });
-    return maxNo + 1;
-}
-
-inline string AdminMenu::taoMa(const string& prefix, int number) const {
-    string s = to_string(number);
-    while (s.size() < 3) s = "0" + s;
-    return prefix + s;
-}
-
-inline bool AdminMenu::capNhatTrangThaiPhong(const string& maPhong, const string& trangThai) {
-    Room r;
-    if (!rooms.search(maPhong, r)) return false;
-    r.setTrangThai(trangThai);
-    rooms.insert(maPhong, r);
-    return true;
-}
-
-inline void AdminMenu::xoaLichSuHoanTac() {
-    while (!nganXepHoanTac.isEmpty()) nganXepHoanTac.pop();
-}
-
 inline void AdminMenu::hoanTac() {
-    ThaoTacHoanTac a;
-    if (!nganXepHoanTac.pop(a)) {
-        cout << "Khong co thao tac nao de hoan tac." << endl;
-        ui::tamDung();
-        return;
-    }
-
-    if (a.loai == "THEM_PHONG") {
-        rooms.remove(a.phongSau.getMaPhong());
-        cout << "Da hoan tac: them phong " << a.phongSau.getMaPhong() << " (phong da bi go bo)." << endl;
-    } else if (a.loai == "SUA_PHONG") {
-        rooms.insert(a.phongTruoc.getMaPhong(), a.phongTruoc);
-        cout << "Da hoan tac: sua phong " << a.phongTruoc.getMaPhong() << " (tra ve gia tri cu)." << endl;
-    } else if (a.loai == "XOA_PHONG") {
-        rooms.insert(a.phongTruoc.getMaPhong(), a.phongTruoc);
-        cout << "Da hoan tac: xoa phong " << a.phongTruoc.getMaPhong() << " (phong da duoc khoi phuc)." << endl;
-    } else if (a.loai == "XOA_KHACH") {
-        tenants.insertBack(a.khach);
-        cout << "Da hoan tac: xoa khach " << a.khach.getMaNguoiThue() << " (khach da duoc khoi phuc)." << endl;
-    } else if (a.loai == "XOA_HOPDONG") {
-        contracts.insertBack(a.hopDong);
-        cout << "Da hoan tac: xoa hop dong " << a.hopDong.getMaHopDong() << " (hop dong da duoc khoi phuc)." << endl;
-    } else if (a.loai == "XOA_HOADON") {
-        invoices.insertBack(a.hoaDon);
-        cout << "Da hoan tac: xoa hoa don " << a.hoaDon.getMaHoaDon() << " (hoa don da duoc khoi phuc)." << endl;
-    } else if (a.loai == "SUA_HOADON") {
-        string maHD = a.hoaDon.getMaHoaDon();
-        double dienCu = a.hoaDon.getChiSoDienMoi();
-        double nuocCu = a.hoaDon.getChiSoNuocMoi();
-        invoices.updateIf(
-            [&maHD](const Invoice& x) { return x.getMaHoaDon() == maHD; },
-            [dienCu, nuocCu](Invoice& x) { x.capNhatChiSoMoi(dienCu, nuocCu); });
-        cout << "Da hoan tac: sua chi so hoa don " << maHD << " (tra ve chi so cu)." << endl;
-    } else if (a.loai == "SUA_COC") {
-        string maHD = a.hopDong.getMaHopDong();
-        string maKhach = a.hopDong.getMaNguoiThue();
-        double cocHopDongCu = a.hopDong.getTienCoc();
-        double cocKhachCu = a.khach.getTienCoc();
-        contracts.updateIf(
-            [&maHD](const Contract& x) { return x.getMaHopDong() == maHD; },
-            [cocHopDongCu](Contract& x) { x.setTienCoc(cocHopDongCu); });
-        tenants.updateIf(
-            [&maKhach](const Tenant& x) { return x.getMaNguoiThue() == maKhach; },
-            [cocKhachCu](Tenant& x) { x.setTienCoc(cocKhachCu); });
-        cout << "Da hoan tac: sua tien coc hop dong " << maHD << " (tra ve tien coc cu)." << endl;
-    }
+    string thongBao;
+    undoService.thucHienHoanTac(thongBao);
+    cout << thongBao << endl;
     ui::tamDung();
 }
 
@@ -277,20 +177,16 @@ inline void AdminMenu::menuPhong() {
 
 inline void AdminMenu::themPhong() {
     string ma = ui::vietHoa(ui::nhapChuoi("Ma phong (VD: P301): ", false));
-    Room tonTai;
-    if (rooms.search(ma, tonTai)) {
-        cout << "Ma phong " << ma << " da ton tai!" << endl;
-        ui::tamDung();
-        return;
-    }
     double dienTich = ui::nhapSoThucDuong("Dien tich (m2): ");
     double giaCoBan = ui::nhapSoThucDuong("Gia co ban (VND/thang): ");
 
-    Room moi(ma, dienTich, giaCoBan, "Trong");
-    rooms.insert(ma, moi);
-    ThaoTacHoanTac a("THEM_PHONG");
-    a.phongSau = moi;
-    nganXepHoanTac.push(a);
+    Room moi;
+    string thongBaoLoi;
+    if (!roomService.themPhong(ma, dienTich, giaCoBan, moi, thongBaoLoi)) {
+        cout << thongBaoLoi << endl;
+        ui::tamDung();
+        return;
+    }
 
     cout << "Da them phong:" << endl;
     moi.display();
@@ -300,7 +196,7 @@ inline void AdminMenu::themPhong() {
 inline void AdminMenu::suaPhong() {
     string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma phong can sua: ", false));
     Room r;
-    if (!rooms.search(ma, r)) {
+    if (!roomService.timPhong(ma, r)) {
         cout << "Khong tim thay phong " << ma << endl;
         ui::tamDung();
         return;
@@ -308,35 +204,35 @@ inline void AdminMenu::suaPhong() {
     r.display();
     cout << "(Nhan Enter de giu nguyen gia tri cu)" << endl;
 
-    Room truoc = r;
-    r.setDienTich(ui::nhapTuyChonSoThucDuong("Dien tich moi: ", r.getDienTich()));
-    r.setGiaCoBan(ui::nhapTuyChonSoThucDuong("Gia co ban moi: ", r.getGiaCoBan()));
+    double dienTichMoi = ui::nhapTuyChonSoThucDuong("Dien tich moi: ", r.getDienTich());
+    double giaCoBanMoi = ui::nhapTuyChonSoThucDuong("Gia co ban moi: ", r.getGiaCoBan());
+    string trangThaiMoi = "";
 
     if (r.getTrangThai() == "Dang thue") {
         cout << "Phong dang co nguoi thue nen khong doi duoc trang thai." << endl;
     } else {
         cout << "Trang thai moi: 1. Trong  2. Dang sua chua" << endl;
         string tt = ui::nhapChuoi("Chon (Enter de giu nguyen): ", true);
-        if (tt == "1") r.setTrangThai("Trong");
-        else if (tt == "2") r.setTrangThai("Dang sua chua");
+        if (tt == "1") trangThaiMoi = "Trong";
+        else if (tt == "2") trangThaiMoi = "Dang sua chua";
         else if (!tt.empty()) cout << "Lua chon khong hop le, giu nguyen trang thai." << endl;
     }
 
-    rooms.insert(ma, r);
-    ThaoTacHoanTac a("SUA_PHONG");
-    a.phongTruoc = truoc;
-    a.phongSau = r;
-    nganXepHoanTac.push(a);
-
-    cout << "Da cap nhat phong:" << endl;
-    r.display();
+    Room phongCapNhat;
+    string thongBaoLoi;
+    if (!roomService.suaPhong(ma, dienTichMoi, giaCoBanMoi, trangThaiMoi, phongCapNhat, thongBaoLoi)) {
+        cout << thongBaoLoi << endl;
+    } else {
+        cout << "Da cap nhat phong:" << endl;
+        phongCapNhat.display();
+    }
     ui::tamDung();
 }
 
 inline void AdminMenu::xoaPhong() {
     string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma phong can xoa: ", false));
     Room r;
-    if (!rooms.search(ma, r)) {
+    if (!roomService.timPhong(ma, r)) {
         cout << "Khong tim thay phong " << ma << endl;
         ui::tamDung();
         return;
@@ -348,11 +244,13 @@ inline void AdminMenu::xoaPhong() {
         return;
     }
     if (ui::xacNhan("Ban co chac muon xoa phong " + ma + "?")) {
-        rooms.remove(ma);
-        ThaoTacHoanTac a("XOA_PHONG");
-        a.phongTruoc = r;
-        nganXepHoanTac.push(a);
-        cout << "Da xoa phong " << ma << endl;
+        Room daXoa;
+        string thongBaoLoi;
+        if (roomService.xoaPhong(ma, daXoa, thongBaoLoi)) {
+            cout << "Da xoa phong " << ma << endl;
+        } else {
+            cout << thongBaoLoi << endl;
+        }
     } else {
         cout << "Da huy." << endl;
     }
@@ -362,7 +260,7 @@ inline void AdminMenu::xoaPhong() {
 inline void AdminMenu::timPhong() {
     string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma phong can tim: ", false));
     Room r;
-    if (!rooms.search(ma, r)) {
+    if (!roomService.timPhong(ma, r)) {
         cout << "Khong tim thay phong " << ma << endl;
         ui::tamDung();
         return;
@@ -370,10 +268,7 @@ inline void AdminMenu::timPhong() {
     r.display();
     if (r.getTrangThai() == "Dang thue") {
         Tenant t;
-        bool co = tenants.findIf([&ma](const Tenant& x) {
-            return x.getMaPhong() == ma && x.getTrangThai() == "Dang o";
-        }, t);
-        if (co) {
+        if (tenantService.timKhachDangOTheoPhong(ma, t)) {
             cout << "Nguoi dang thue:" << endl;
             t.display();
         }
@@ -383,10 +278,11 @@ inline void AdminMenu::timPhong() {
 
 inline void AdminMenu::xemDanhSachPhong() const {
     cout << "------ DANH SACH PHONG ------" << endl;
-    if (rooms.isEmpty()) {
+    if (roomService.isEmpty()) {
         cout << "(Chua co phong nao)" << endl;
     } else {
-        rooms.inorderTraverse([](const Room& r) { r.display(); });
+        DoublyLinkedList<Room> ds = roomService.layTatCaPhong();
+        ds.traverseForward([](const Room& r) { r.display(); });
     }
     ui::tamDung();
 }
@@ -394,11 +290,10 @@ inline void AdminMenu::xemDanhSachPhong() const {
 inline int AdminMenu::inPhongTrong() const {
     int dem = 0;
     cout << "------ PHONG TRONG ------" << endl;
-    rooms.inorderTraverse([&dem](const Room& r) {
-        if (r.isTrong()) {
-            r.display();
-            dem++;
-        }
+    DoublyLinkedList<Room> ds = roomService.layPhongTrong();
+    ds.traverseForward([&dem](const Room& r) {
+        r.display();
+        dem++;
     });
     if (dem == 0) cout << "(Khong con phong trong)" << endl;
     return dem;
@@ -421,9 +316,9 @@ inline void AdminMenu::menuCheckin() {
     do {
         ui::xoaManHinh();
         cout << "======== CHECK-IN (HANG DOI) ========" << endl;
-        cout << "So khach dang cho: " << checkinQueue.size() << endl;
+        cout << "So khach dang cho: " << checkinService.soLuongDangCho() << endl;
         Tenant dauHang;
-        if (checkinQueue.front(dauHang)) {
+        if (checkinService.layKhachDauHang(dauHang)) {
             cout << "Khach dau hang: ";
             inKhachCho(dauHang);
         }
@@ -446,84 +341,42 @@ inline void AdminMenu::menuCheckin() {
     } while (choice != 0);
 }
 
-template <class Func>
-void AdminMenu::duyetHangDoi(Func visit) {
-    int n = checkinQueue.size();
-    for (int i = 0; i < n; i++) {
-        Tenant t;
-        checkinQueue.dequeue(t);
-        visit(t);
-        checkinQueue.enqueue(t);
-    }
-}
-
-inline void AdminMenu::capNhatBoDemKhach() {
-    duyetHangDoi([this](const Tenant& t) {
-        string id = t.getMaNguoiThue();
-        if (id.size() > 2 && id.compare(0, 2, "TN") == 0) {
-            string rest = id.substr(2);
-            if (ui::laChuSo(rest) && rest.size() <= 9) {
-                int v = stoi(rest);
-                if (v > tenantCounter) tenantCounter = v;
-            }
-        }
-    });
-}
-
-inline bool AdminMenu::cccdDangCho(const string& cccd) {
-    bool co = false;
-    duyetHangDoi([&cccd, &co](const Tenant& t) {
-        if (t.getCccd() == cccd) co = true;
-    });
-    return co;
-}
-
 inline void AdminMenu::xemHangDoi() {
     cout << "------ KHACH DANG CHO CHECK-IN ------" << endl;
-    if (checkinQueue.isEmpty()) {
+    if (checkinService.soLuongDangCho() == 0) {
         cout << "(Khong co khach nao dang cho)" << endl;
+    } else {
+        int stt = 0;
+        DoublyLinkedList<Tenant> ds = checkinService.layDanhSachHangDoi();
+        ds.traverseForward([this, &stt](const Tenant& t) {
+            cout << ++stt << ". ";
+            inKhachCho(t);
+        });
     }
-    int stt = 0;
-    duyetHangDoi([this, &stt](const Tenant& t) {
-        cout << ++stt << ". ";
-        inKhachCho(t);
-    });
     ui::tamDung();
 }
 
 inline void AdminMenu::dangKyCheckin() {
     string ten = ui::nhapChuoi("Ho ten: ", false);
     string cccd = ui::nhapChuSo("CCCD (12 so): ", 12, false);
-
-    Tenant daO;
-    bool trung = tenants.findIf([&cccd](const Tenant& x) {
-        return x.getCccd() == cccd && x.getTrangThai() == "Dang o";
-    }, daO);
-    if (trung) {
-        cout << "CCCD nay dang thue phong " << daO.getMaPhong() << " (khach " << daO.getMaNguoiThue() << ")!" << endl;
-        ui::tamDung();
-        return;
-    }
-
-    if (cccdDangCho(cccd)) {
-        cout << "CCCD nay da co trong hang doi!" << endl;
-        ui::tamDung();
-        return;
-    }
-
     string sdt = ui::nhapChuSo("So dien thoai (10 so): ", 10, false);
 
-    string ma = taoMa("TN", ++tenantCounter);
-    Tenant t(ma, ten, cccd, sdt, "", 0, "");
-    checkinQueue.enqueue(t);
+    string maKhach;
+    int viTri;
+    string thongBaoLoi;
+    if (!checkinService.dangKyCheckin(ten, cccd, sdt, maKhach, viTri, thongBaoLoi)) {
+        cout << thongBaoLoi << endl;
+        ui::tamDung();
+        return;
+    }
 
-    cout << "Da them vao hang doi. Ma khach: " << ma << " (vi tri: " << checkinQueue.size() << ")" << endl;
+    cout << "Da them vao hang doi. Ma khach: " << maKhach << " (vi tri: " << viTri << ")" << endl;
     ui::tamDung();
 }
 
 inline void AdminMenu::xuLyCheckin() {
     Tenant t;
-    if (!checkinQueue.front(t)) {
+    if (!checkinService.layKhachDauHang(t)) {
         cout << "Khong co khach nao dang cho." << endl;
         ui::tamDung();
         return;
@@ -538,7 +391,7 @@ inline void AdminMenu::xuLyCheckin() {
 
     string maPhong = ui::vietHoa(ui::nhapChuoi("Chon ma phong: ", false));
     Room r;
-    if (!rooms.search(maPhong, r)) {
+    if (!roomService.timPhong(maPhong, r)) {
         cout << "Khong tim thay phong " << maPhong << endl;
         ui::tamDung();
         return;
@@ -559,23 +412,18 @@ inline void AdminMenu::xuLyCheckin() {
         return;
     }
 
-    Tenant chinhThuc(t.getMaNguoiThue(), t.getHoTen(), t.getCccd(), t.getSoDienThoai(),
-                     maPhong, coc, ngay);
-    string maHD = taoMa("HD", soTiepTheo(contracts, "HD"));
-    Contract hd(maHD, maPhong, chinhThuc.getMaNguoiThue(), ngay, thoiHan, coc);
-
-    tenants.insertBack(chinhThuc);
-    contracts.insertBack(hd);
-    r.setTrangThai("Dang thue");
-    rooms.insert(maPhong, r);
-
-    Tenant boQua;
-    checkinQueue.dequeue(boQua);
-    xoaLichSuHoanTac();
+    Tenant tenantTao;
+    Contract contractTao;
+    string thongBaoLoi;
+    if (!checkinService.xuLyCheckin(maPhong, ngay, thoiHan, coc, tenantTao, contractTao, thongBaoLoi)) {
+        cout << thongBaoLoi << endl;
+        ui::tamDung();
+        return;
+    }
 
     cout << "Check-in thanh cong!" << endl;
-    chinhThuc.display();
-    hd.display();
+    tenantTao.display();
+    contractTao.display();
     ui::tamDung();
 }
 
@@ -610,21 +458,19 @@ inline void AdminMenu::menuKhach() {
 
 inline void AdminMenu::xemKhach(bool chiDangO) const {
     cout << "------ " << (chiDangO ? "KHACH DANG O" : "TAT CA KHACH THUE") << " ------" << endl;
-    int dem = 0;
-    tenants.traverseForward([chiDangO, &dem](const Tenant& t) {
-        if (!chiDangO || t.getTrangThai() == "Dang o") {
-            t.display();
-            dem++;
-        }
-    });
-    if (dem == 0) cout << "(Khong co khach nao)" << endl;
+    DoublyLinkedList<Tenant> ds = tenantService.layDanhSachKhach(chiDangO);
+    if (ds.isEmpty()) {
+        cout << "(Khong co khach nao)" << endl;
+    } else {
+        ds.traverseForward([](const Tenant& t) { t.display(); });
+    }
     ui::tamDung();
 }
 
 inline void AdminMenu::timKhach() {
     string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma khach can tim: ", false));
     Tenant t;
-    if (tenants.findIf([&ma](const Tenant& x) { return x.getMaNguoiThue() == ma; }, t)) {
+    if (tenantService.timKhachTheoMa(ma, t)) {
         t.display();
     } else {
         cout << "Khong tim thay khach " << ma << endl;
@@ -635,7 +481,7 @@ inline void AdminMenu::timKhach() {
 inline void AdminMenu::suaKhach() {
     string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma khach can sua: ", false));
     Tenant t;
-    if (!tenants.findIf([&ma](const Tenant& x) { return x.getMaNguoiThue() == ma; }, t)) {
+    if (!tenantService.timKhachTheoMa(ma, t)) {
         cout << "Khong tim thay khach " << ma << endl;
         ui::tamDung();
         return;
@@ -647,22 +493,19 @@ inline void AdminMenu::suaKhach() {
     string cccd = ui::nhapChuSo("CCCD moi (12 so): ", 12, true);
     string sdt = ui::nhapChuSo("SDT moi (10 so): ", 10, true);
 
-    tenants.updateIf(
-        [&ma](const Tenant& x) { return x.getMaNguoiThue() == ma; },
-        [&ten, &cccd, &sdt](Tenant& x) {
-            if (!ten.empty()) x.setHoTen(ten);
-            if (!cccd.empty()) x.setCccd(cccd);
-            if (!sdt.empty()) x.setSoDienThoai(sdt);
-        });
-
-    cout << "Da cap nhat." << endl;
+    string thongBaoLoi;
+    if (tenantService.suaKhach(ma, ten, cccd, sdt, thongBaoLoi)) {
+        cout << "Da cap nhat." << endl;
+    } else {
+        cout << thongBaoLoi << endl;
+    }
     ui::tamDung();
 }
 
 inline void AdminMenu::traPhong() {
     string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma khach tra phong: ", false));
     Tenant t;
-    if (!tenants.findIf([&ma](const Tenant& x) { return x.getMaNguoiThue() == ma; }, t)) {
+    if (!tenantService.timKhachTheoMa(ma, t)) {
         cout << "Khong tim thay khach " << ma << endl;
         ui::tamDung();
         return;
@@ -674,10 +517,7 @@ inline void AdminMenu::traPhong() {
     }
 
     string phong = t.getMaPhong();
-    int chuaThu = 0;
-    invoices.traverseForward([&phong, &chuaThu](const Invoice& h) {
-        if (h.getMaPhong() == phong && !h.isDaThanhToan()) chuaThu++;
-    });
+    int chuaThu = invoiceService.demHoaDonChuaThuCuaPhong(phong);
     t.display();
     if (chuaThu > 0) {
         cout << "CANH BAO: phong " << phong << " con " << chuaThu << " hoa don chua thanh toan!" << endl;
@@ -689,24 +529,23 @@ inline void AdminMenu::traPhong() {
         return;
     }
 
-    tenants.updateIf(
-        [&ma](const Tenant& x) { return x.getMaNguoiThue() == ma; },
-        [](Tenant& x) { x.checkOut(); });
-    contracts.updateIf(
-        [&ma](const Contract& c) { return c.getMaNguoiThue() == ma && c.isConHieuLuc(); },
-        [](Contract& c) { c.ketThuc(); });
-    capNhatTrangThaiPhong(phong, "Trong");
-    xoaLichSuHoanTac();
-
-    cout << "Tra phong thanh cong. Phong " << phong << " da tro ve trang thai Trong." << endl;
-    cout << "Tien coc can hoan lai: " << t.getTienCoc() << " VND" << endl;
+    string maPhongTra;
+    double tienCocHoan = 0;
+    int soHoaDon = 0;
+    string thongBaoLoi;
+    if (checkinService.traPhong(ma, maPhongTra, tienCocHoan, soHoaDon, thongBaoLoi)) {
+        cout << "Tra phong thanh cong. Phong " << maPhongTra << " da tro ve trang thai Trong." << endl;
+        cout << "Tien coc can hoan lai: " << tienCocHoan << " VND" << endl;
+    } else {
+        cout << thongBaoLoi << endl;
+    }
     ui::tamDung();
 }
 
 inline void AdminMenu::xoaKhach() {
     string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma khach can xoa: ", false));
     Tenant t;
-    if (!tenants.findIf([&ma](const Tenant& x) { return x.getMaNguoiThue() == ma; }, t)) {
+    if (!tenantService.timKhachTheoMa(ma, t)) {
         cout << "Khong tim thay khach " << ma << endl;
         ui::tamDung();
         return;
@@ -718,17 +557,20 @@ inline void AdminMenu::xoaKhach() {
         return;
     }
     Contract hd;
-    if (contracts.findIf([&ma](const Contract& c) { return c.getMaNguoiThue() == ma; }, hd)) {
+    bool coHopDong = contractService.timHopDongCuaKhach(ma, hd);
+    if (coHopDong) {
         cout << "Khach con hop dong " << hd.getMaHopDong() << ", hay xoa hop dong truoc." << endl;
         ui::tamDung();
         return;
     }
     if (ui::xacNhan("Ban co chac muon xoa khach " + ma + "?")) {
-        ThaoTacHoanTac a("XOA_KHACH");
-        a.khach = t;
-        nganXepHoanTac.push(a);
-        tenants.removeIf([&ma](const Tenant& x) { return x.getMaNguoiThue() == ma; });
-        cout << "Da xoa khach " << ma << endl;
+        Tenant khachDaXoa;
+        string thongBaoLoi;
+        if (tenantService.xoaKhach(ma, coHopDong, khachDaXoa, thongBaoLoi)) {
+            cout << "Da xoa khach " << ma << endl;
+        } else {
+            cout << thongBaoLoi << endl;
+        }
     } else {
         cout << "Da huy." << endl;
     }
@@ -766,21 +608,19 @@ inline void AdminMenu::menuHopDong() {
 
 inline void AdminMenu::xemHopDong(bool chiConHieuLuc) const {
     cout << "------ " << (chiConHieuLuc ? "HOP DONG CON HIEU LUC" : "TAT CA HOP DONG") << " ------" << endl;
-    int dem = 0;
-    contracts.traverseForward([chiConHieuLuc, &dem](const Contract& c) {
-        if (!chiConHieuLuc || c.isConHieuLuc()) {
-            c.display();
-            dem++;
-        }
-    });
-    if (dem == 0) cout << "(Khong co hop dong nao)" << endl;
+    DoublyLinkedList<Contract> ds = contractService.layDanhSachHopDong(chiConHieuLuc);
+    if (ds.isEmpty()) {
+        cout << "(Khong co hop dong nao)" << endl;
+    } else {
+        ds.traverseForward([](const Contract& c) { c.display(); });
+    }
     ui::tamDung();
 }
 
 inline void AdminMenu::timHopDong() {
     string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma hop dong can tim: ", false));
     Contract c;
-    if (contracts.findIf([&ma](const Contract& x) { return x.getMaHopDong() == ma; }, c)) {
+    if (contractService.timHopDong(ma, c)) {
         c.display();
     } else {
         cout << "Khong tim thay hop dong " << ma << endl;
@@ -791,7 +631,7 @@ inline void AdminMenu::timHopDong() {
 inline void AdminMenu::giaHanHopDong() {
     string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma hop dong can gia han: ", false));
     Contract c;
-    if (!contracts.findIf([&ma](const Contract& x) { return x.getMaHopDong() == ma; }, c)) {
+    if (!contractService.timHopDong(ma, c)) {
         cout << "Khong tim thay hop dong " << ma << endl;
         ui::tamDung();
         return;
@@ -803,20 +643,20 @@ inline void AdminMenu::giaHanHopDong() {
     }
     c.display();
     int them = ui::nhapSoNguyenDuong("Gia han them (thang): ");
-    int thoiHanMoi = c.getThoiHan() + them;
-
-    contracts.updateIf(
-        [&ma](const Contract& x) { return x.getMaHopDong() == ma; },
-        [thoiHanMoi](Contract& x) { x.setThoiHan(thoiHanMoi); });
-
-    cout << "Da gia han. Thoi han moi: " << thoiHanMoi << " thang." << endl;
+    int thoiHanMoi = 0;
+    string thongBaoLoi;
+    if (contractService.giaHanHopDong(ma, them, thoiHanMoi, thongBaoLoi)) {
+        cout << "Da gia han. Thoi han moi: " << thoiHanMoi << " thang." << endl;
+    } else {
+        cout << thongBaoLoi << endl;
+    }
     ui::tamDung();
 }
 
 inline void AdminMenu::xoaHopDong() {
     string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma hop dong can xoa: ", false));
     Contract c;
-    if (!contracts.findIf([&ma](const Contract& x) { return x.getMaHopDong() == ma; }, c)) {
+    if (!contractService.timHopDong(ma, c)) {
         cout << "Khong tim thay hop dong " << ma << endl;
         ui::tamDung();
         return;
@@ -828,11 +668,13 @@ inline void AdminMenu::xoaHopDong() {
         return;
     }
     if (ui::xacNhan("Ban co chac muon xoa hop dong " + ma + "?")) {
-        ThaoTacHoanTac a("XOA_HOPDONG");
-        a.hopDong = c;
-        nganXepHoanTac.push(a);
-        contracts.removeIf([&ma](const Contract& x) { return x.getMaHopDong() == ma; });
-        cout << "Da xoa hop dong " << ma << endl;
+        Contract hopDongDaXoa;
+        string thongBaoLoi;
+        if (contractService.xoaHopDong(ma, hopDongDaXoa, thongBaoLoi)) {
+            cout << "Da xoa hop dong " << ma << endl;
+        } else {
+            cout << thongBaoLoi << endl;
+        }
     } else {
         cout << "Da huy." << endl;
     }
@@ -842,7 +684,7 @@ inline void AdminMenu::xoaHopDong() {
 inline void AdminMenu::suaTienCoc() {
     string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma hop dong can sua tien coc: ", false));
     Contract c;
-    if (!contracts.findIf([&ma](const Contract& x) { return x.getMaHopDong() == ma; }, c)) {
+    if (!contractService.timHopDong(ma, c)) {
         cout << "Khong tim thay hop dong " << ma << endl;
         ui::tamDung();
         return;
@@ -854,21 +696,13 @@ inline void AdminMenu::suaTienCoc() {
     }
     c.display();
     double cocMoi = ui::nhapTuyChonSoThucDuong("Tien coc moi (Enter de giu nguyen): ", c.getTienCoc());
-    string maKhach = c.getMaNguoiThue();
 
-    ThaoTacHoanTac a("SUA_COC");
-    a.hopDong = c;
-    tenants.findIf([&maKhach](const Tenant& x) { return x.getMaNguoiThue() == maKhach; }, a.khach);
-    nganXepHoanTac.push(a);
-
-    contracts.updateIf(
-        [&ma](const Contract& x) { return x.getMaHopDong() == ma; },
-        [cocMoi](Contract& x) { x.setTienCoc(cocMoi); });
-    tenants.updateIf(
-        [&maKhach](const Tenant& x) { return x.getMaNguoiThue() == maKhach; },
-        [cocMoi](Tenant& x) { x.setTienCoc(cocMoi); });
-
-    cout << "Da cap nhat tien coc: " << cocMoi << " VND (hop dong va khach thue)." << endl;
+    string thongBaoLoi;
+    if (contractService.suaTienCoc(ma, cocMoi, thongBaoLoi)) {
+        cout << "Da cap nhat tien coc: " << cocMoi << " VND (hop dong va khach thue)." << endl;
+    } else {
+        cout << thongBaoLoi << endl;
+    }
     ui::tamDung();
 }
 
@@ -906,7 +740,7 @@ inline void AdminMenu::menuHoaDon() {
 inline void AdminMenu::lapHoaDon() {
     string maPhong = ui::vietHoa(ui::nhapChuoi("Ma phong: ", false));
     Room r;
-    if (!rooms.search(maPhong, r)) {
+    if (!roomService.timPhong(maPhong, r)) {
         cout << "Khong tim thay phong " << maPhong << endl;
         ui::tamDung();
         return;
@@ -918,11 +752,7 @@ inline void AdminMenu::lapHoaDon() {
     }
 
     string thang = ui::nhapThang("Thang (YYYY-MM): ");
-    bool trung = false;
-    invoices.traverseForward([&maPhong, &thang, &trung](const Invoice& h) {
-        if (h.getMaPhong() == maPhong && h.getThangNam() == thang) trung = true;
-    });
-    if (trung) {
+    if (invoiceService.kiemTraDaCoHoaDonThang(maPhong, thang)) {
         cout << "Phong " << maPhong << " da co hoa don thang " << thang << "!" << endl;
         ui::tamDung();
         return;
@@ -931,14 +761,7 @@ inline void AdminMenu::lapHoaDon() {
     double dienCu = 0, nuocCu = 0;
     bool coHoaDonCu = false;
     string thangCu;
-    invoices.traverseForward([&](const Invoice& h) {
-        if (h.getMaPhong() == maPhong && (!coHoaDonCu || h.getThangNam() > thangCu)) {
-            coHoaDonCu = true;
-            thangCu = h.getThangNam();
-            dienCu = h.getChiSoDienMoi();
-            nuocCu = h.getChiSoNuocMoi();
-        }
-    });
+    invoiceService.timChiSoCuMoiNhat(maPhong, coHoaDonCu, thangCu, dienCu, nuocCu);
 
     if (coHoaDonCu) {
         cout << "Chi so cu lay tu hoa don thang " << thangCu
@@ -953,11 +776,13 @@ inline void AdminMenu::lapHoaDon() {
     double giaDien = ui::nhapTuyChonSoThucDuong("Don gia dien (Enter = 3500): ", 3500);
     double giaNuoc = ui::nhapTuyChonSoThucDuong("Don gia nuoc (Enter = 15000): ", 15000);
 
-    string maHD = taoMa("HDN", soTiepTheo(invoices, "HDN"));
-    Invoice hd(maHD, maPhong, thang, dienCu, dienMoi, nuocCu, nuocMoi,
-               giaDien, giaNuoc, r.getGiaCoBan());
-    invoices.insertBack(hd);
-    xoaLichSuHoanTac();
+    Invoice hd;
+    string thongBaoLoi;
+    if (!invoiceService.lapHoaDon(maPhong, thang, dienCu, dienMoi, nuocCu, nuocMoi, giaDien, giaNuoc, r.getGiaCoBan(), hd, thongBaoLoi)) {
+        cout << thongBaoLoi << endl;
+        ui::tamDung();
+        return;
+    }
 
     cout << "Da lap hoa don:" << endl;
     hd.display();
@@ -966,18 +791,12 @@ inline void AdminMenu::lapHoaDon() {
 
 inline void AdminMenu::xemHoaDon(bool chiChuaThu) const {
     cout << "------ " << (chiChuaThu ? "HOA DON CHUA THANH TOAN" : "TAT CA HOA DON") << " ------" << endl;
-    int dem = 0;
     double tong = 0;
-    invoices.traverseForward([chiChuaThu, &dem, &tong](const Invoice& h) {
-        if (!chiChuaThu || !h.isDaThanhToan()) {
-            h.display();
-            dem++;
-            if (!h.isDaThanhToan()) tong += h.tinhTongTien();
-        }
-    });
-    if (dem == 0) {
+    DoublyLinkedList<Invoice> ds = invoiceService.layDanhSachHoaDon(chiChuaThu, tong);
+    if (ds.isEmpty()) {
         cout << "(Khong co hoa don nao)" << endl;
     } else {
+        ds.traverseForward([](const Invoice& h) { h.display(); });
         cout << "Tong tien chua thu: " << tong << " VND" << endl;
     }
     ui::tamDung();
@@ -986,21 +805,19 @@ inline void AdminMenu::xemHoaDon(bool chiChuaThu) const {
 inline void AdminMenu::xemHoaDonTheoPhong() const {
     string maPhong = ui::vietHoa(ui::nhapChuoi("Nhap ma phong: ", false));
     cout << "------ HOA DON PHONG " << maPhong << " ------" << endl;
-    int dem = 0;
-    invoices.traverseForward([&maPhong, &dem](const Invoice& h) {
-        if (h.getMaPhong() == maPhong) {
-            h.display();
-            dem++;
-        }
-    });
-    if (dem == 0) cout << "(Phong nay chua co hoa don nao)" << endl;
+    DoublyLinkedList<Invoice> ds = invoiceService.layHoaDonTheoPhong(maPhong);
+    if (ds.isEmpty()) {
+        cout << "(Phong nay chua co hoa don nao)" << endl;
+    } else {
+        ds.traverseForward([](const Invoice& h) { h.display(); });
+    }
     ui::tamDung();
 }
 
 inline void AdminMenu::thanhToanHoaDon() {
     string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma hoa don: ", false));
     Invoice h;
-    if (!invoices.findIf([&ma](const Invoice& x) { return x.getMaHoaDon() == ma; }, h)) {
+    if (!invoiceService.timHoaDon(ma, h)) {
         cout << "Khong tim thay hoa don " << ma << endl;
         ui::tamDung();
         return;
@@ -1012,11 +829,13 @@ inline void AdminMenu::thanhToanHoaDon() {
         return;
     }
     if (ui::xacNhan("Xac nhan khach da thanh toan " + to_string((long long)h.tinhTongTien()) + " VND?")) {
-        invoices.updateIf(
-            [&ma](const Invoice& x) { return x.getMaHoaDon() == ma; },
-            [](Invoice& x) { x.danhDauDaThanhToan(); });
-        xoaLichSuHoanTac();
-        cout << "Da ghi nhan thanh toan." << endl;
+        Invoice hdDaThanhToan;
+        string thongBaoLoi;
+        if (invoiceService.thanhToanHoaDon(ma, hdDaThanhToan, thongBaoLoi)) {
+            cout << "Da ghi nhan thanh toan." << endl;
+        } else {
+            cout << thongBaoLoi << endl;
+        }
     } else {
         cout << "Da huy." << endl;
     }
@@ -1026,7 +845,7 @@ inline void AdminMenu::thanhToanHoaDon() {
 inline void AdminMenu::xoaHoaDon() {
     string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma hoa don can xoa: ", false));
     Invoice h;
-    if (!invoices.findIf([&ma](const Invoice& x) { return x.getMaHoaDon() == ma; }, h)) {
+    if (!invoiceService.timHoaDon(ma, h)) {
         cout << "Khong tim thay hoa don " << ma << endl;
         ui::tamDung();
         return;
@@ -1038,11 +857,13 @@ inline void AdminMenu::xoaHoaDon() {
         return;
     }
     if (ui::xacNhan("Ban co chac muon xoa hoa don " + ma + "?")) {
-        ThaoTacHoanTac a("XOA_HOADON");
-        a.hoaDon = h;
-        nganXepHoanTac.push(a);
-        invoices.removeIf([&ma](const Invoice& x) { return x.getMaHoaDon() == ma; });
-        cout << "Da xoa hoa don " << ma << endl;
+        Invoice hdDaXoa;
+        string thongBaoLoi;
+        if (invoiceService.xoaHoaDon(ma, hdDaXoa, thongBaoLoi)) {
+            cout << "Da xoa hoa don " << ma << endl;
+        } else {
+            cout << thongBaoLoi << endl;
+        }
     } else {
         cout << "Da huy." << endl;
     }
@@ -1052,7 +873,7 @@ inline void AdminMenu::xoaHoaDon() {
 inline void AdminMenu::suaChiSoHoaDon() {
     string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma hoa don can sua chi so: ", false));
     Invoice h;
-    if (!invoices.findIf([&ma](const Invoice& x) { return x.getMaHoaDon() == ma; }, h)) {
+    if (!invoiceService.timHoaDon(ma, h)) {
         cout << "Khong tim thay hoa don " << ma << endl;
         ui::tamDung();
         return;
@@ -1060,18 +881,6 @@ inline void AdminMenu::suaChiSoHoaDon() {
     h.display();
     if (h.isDaThanhToan()) {
         cout << "Hoa don da thanh toan, khong sua duoc." << endl;
-        ui::tamDung();
-        return;
-    }
-
-    string maPhong = h.getMaPhong();
-    string thang = h.getThangNam();
-    bool coMoiHon = false;
-    invoices.traverseForward([&maPhong, &thang, &coMoiHon](const Invoice& x) {
-        if (x.getMaPhong() == maPhong && x.getThangNam() > thang) coMoiHon = true;
-    });
-    if (coMoiHon) {
-        cout << "Phong " << maPhong << " da co hoa don thang sau, chi sua duoc hoa don moi nhat." << endl;
         ui::tamDung();
         return;
     }
@@ -1084,18 +893,14 @@ inline void AdminMenu::suaChiSoHoaDon() {
                                             ", cu " + to_string((long long)h.getChiSoNuocCu()) + "): ",
                                             h.getChiSoNuocMoi(), h.getChiSoNuocCu());
 
-    if (dienMoi != h.getChiSoDienMoi() || nuocMoi != h.getChiSoNuocMoi()) {
-        ThaoTacHoanTac a("SUA_HOADON");
-        a.hoaDon = h;
-        nganXepHoanTac.push(a);
+    Invoice hdCapNhat;
+    string thongBaoLoi;
+    if (!invoiceService.suaChiSoHoaDon(ma, dienMoi, nuocMoi, hdCapNhat, thongBaoLoi)) {
+        cout << thongBaoLoi << endl;
+    } else {
+        cout << "Da cap nhat:" << endl;
+        hdCapNhat.display();
     }
-    invoices.updateIf(
-        [&ma](const Invoice& x) { return x.getMaHoaDon() == ma; },
-        [dienMoi, nuocMoi](Invoice& x) { x.capNhatChiSoMoi(dienMoi, nuocMoi); });
-
-    invoices.findIf([&ma](const Invoice& x) { return x.getMaHoaDon() == ma; }, h);
-    cout << "Da cap nhat:" << endl;
-    h.display();
     ui::tamDung();
 }
 
@@ -1127,12 +932,11 @@ inline void AdminMenu::menuDichVu() {
 inline void AdminMenu::themDichVu() {
     string ten = ui::nhapChuoi("Ten dich vu: ", false);
     double gia = ui::nhapSoThucDuong("Don gia (VND/thang): ");
-    string ma = taoMa("DV", soTiepTheo(services, "DV"));
 
-    Service s(ma, ten, gia);
-    services.insertBack(s);
+    Service s;
+    dichVuService.themDichVu(ten, gia, s);
 
-    cout << "Da them dich vu " << ma << ":" << endl;
+    cout << "Da them dich vu " << s.getMaDichVu() << ":" << endl;
     s.display();
     ui::tamDung();
 }
@@ -1140,7 +944,7 @@ inline void AdminMenu::themDichVu() {
 inline void AdminMenu::suaDichVu() {
     string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma dich vu can sua: ", false));
     Service s;
-    if (!services.findIf([&ma](const Service& x) { return x.getMaDichVu() == ma; }, s)) {
+    if (!dichVuService.timDichVu(ma, s)) {
         cout << "Khong tim thay dich vu " << ma << endl;
         ui::tamDung();
         return;
@@ -1150,29 +954,31 @@ inline void AdminMenu::suaDichVu() {
     string ten = ui::nhapChuoi("Ten moi: ", true);
     double gia = ui::nhapTuyChonSoThucDuong("Don gia moi: ", s.getDonGia());
 
-    services.updateIf(
-        [&ma](const Service& x) { return x.getMaDichVu() == ma; },
-        [&ten, gia](Service& x) {
-            if (!ten.empty()) x.setTenDichVu(ten);
-            x.setDonGia(gia);
-        });
-
-    cout << "Da cap nhat dich vu " << ma << endl;
+    string thongBaoLoi;
+    if (dichVuService.suaDichVu(ma, ten, gia, thongBaoLoi)) {
+        cout << "Da cap nhat dich vu " << ma << endl;
+    } else {
+        cout << thongBaoLoi << endl;
+    }
     ui::tamDung();
 }
 
 inline void AdminMenu::xoaDichVu() {
     string ma = ui::vietHoa(ui::nhapChuoi("Nhap ma dich vu can xoa: ", false));
     Service s;
-    if (!services.findIf([&ma](const Service& x) { return x.getMaDichVu() == ma; }, s)) {
+    if (!dichVuService.timDichVu(ma, s)) {
         cout << "Khong tim thay dich vu " << ma << endl;
         ui::tamDung();
         return;
     }
     s.display();
     if (ui::xacNhan("Ban co chac muon xoa dich vu " + ma + "?")) {
-        services.removeIf([&ma](const Service& x) { return x.getMaDichVu() == ma; });
-        cout << "Da xoa dich vu " << ma << endl;
+        string thongBaoLoi;
+        if (dichVuService.xoaDichVu(ma, thongBaoLoi)) {
+            cout << "Da xoa dich vu " << ma << endl;
+        } else {
+            cout << thongBaoLoi << endl;
+        }
     } else {
         cout << "Da huy." << endl;
     }
@@ -1181,10 +987,11 @@ inline void AdminMenu::xoaDichVu() {
 
 inline void AdminMenu::xemDichVu() const {
     cout << "------ DANH SACH DICH VU ------" << endl;
-    if (services.isEmpty()) {
+    if (dichVuService.isEmpty()) {
         cout << "(Chua co dich vu nao)" << endl;
     } else {
-        services.traverseForward([](const Service& s) {
+        DoublyLinkedList<Service> ds = dichVuService.layDanhSachDichVu();
+        ds.traverseForward([](const Service& s) {
             cout << s.getMaDichVu() << " | ";
             s.display();
         });

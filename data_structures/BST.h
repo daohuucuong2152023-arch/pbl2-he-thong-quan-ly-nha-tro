@@ -49,8 +49,6 @@ public:
     bool isEmpty() const;
 };
 
-// ====== ĐỊNH NGHĨA Ở DƯỚI ======
-
 template <class T>
 BSTNode<T>::BSTNode(const string& k, const T& d)
     : key(k), data(d), left(nullptr), right(nullptr) {}
